@@ -177,7 +177,3 @@ src/
     storage.ts       IndexedDB key-value store, localStorage fallback, migration
     store.ts         Solid store, undo/redo, localStorage persistence
 ```
-
-## Licence
-
-MIT — do whatever you like with it.
