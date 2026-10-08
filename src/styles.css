@@ -393,6 +393,24 @@ input.color {
   flex: 0 0 auto;
   margin-bottom: 8px;
 }
+.card-background-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px;
+}
+.card-background-controls .field:first-child {
+  flex: 0 0 auto;
+}
+.card-background-controls .field:last-child {
+  flex: 1 1 128px;
+}
+.card-background-separator {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 28px;
+}
 
 .toggle {
   display: inline-flex;

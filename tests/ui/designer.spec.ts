@@ -458,6 +458,17 @@ test.describe('Designer – inspector', () => {
     await expect(settings.locator('[data-field="Name"]')).toBeVisible();
     await expect(settings.locator('[data-field="Background image"]')).toBeVisible();
     await expect(page.locator('.side.right').getByRole('heading', { name: 'Card background' })).toHaveCount(0);
+    const radiusBox = (await settings.locator('[data-field="Corner radius"]').boundingBox())!;
+    const backgroundHeadingBox = (await settings.getByRole('heading', { name: 'Card background' }).boundingBox())!;
+    expect(radiusBox.y + radiusBox.height).toBeLessThan(backgroundHeadingBox.y);
+    const colourBox = (await settings.locator('[data-field="Colour"] input[type="color"]').boundingBox())!;
+    const separator = settings.locator('.card-background-separator');
+    await expect(separator).toHaveText('or');
+    const separatorBox = (await separator.boundingBox())!;
+    const uploadBox = (await settings.getByRole('button', { name: 'Upload…' }).boundingBox())!;
+    expect(Math.abs(colourBox.y - uploadBox.y)).toBeLessThan(2);
+    expect(separatorBox.x).toBeGreaterThan(colourBox.x + colourBox.width);
+    expect(uploadBox.x).toBeGreaterThan(separatorBox.x + separatorBox.width);
     const widthBox = (await settings.locator('[data-field="Width"]').boundingBox())!;
     const heightBox = (await settings.locator('[data-field="Height"]').boundingBox())!;
     const swap = settings.getByRole('button', { name: 'Swap orientation' });
@@ -482,6 +493,12 @@ test.describe('Designer – inspector', () => {
     const narrowHeightBox = (await settings.locator('[data-field="Height"]').boundingBox())!;
     const narrowSwapBox = (await swap.boundingBox())!;
     expect(narrowSwapBox.y).toBeGreaterThan(narrowHeightBox.y + narrowHeightBox.height);
+    const narrowColourBox = (await settings.locator('[data-field="Colour"] input[type="color"]').boundingBox())!;
+    const narrowSeparatorBox = (await separator.boundingBox())!;
+    const narrowUploadBox = (await settings.getByRole('button', { name: 'Upload…' }).boundingBox())!;
+    expect(Math.abs(narrowColourBox.y - narrowUploadBox.y)).toBeLessThan(2);
+    expect(narrowSeparatorBox.x).toBeGreaterThan(narrowColourBox.x + narrowColourBox.width);
+    expect(narrowUploadBox.x).toBeGreaterThan(narrowSeparatorBox.x + narrowSeparatorBox.width);
   });
 
   test('template name is reflected in the top bar; export downloads JSON', async ({ page }) => {

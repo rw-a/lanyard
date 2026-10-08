@@ -57,43 +57,44 @@ export default function TemplateBasics() {
           <IconSwap size={18} />
         </button>
       </div>
+      <Field label="Corner radius">
+        <NumberField value={template.card.borderRadius} min={0} max={30} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.borderRadius = v), false)} />
+      </Field>
 
       <h4 class="card-settings-subhead">Card background</h4>
-      <div class="grid2">
+      <div class="card-background-controls">
         <Field label="Colour">
           <ColorField value={template.card.bg} onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.bg = v), false)} />
         </Field>
-        <Field label="Corner radius">
-          <NumberField value={template.card.borderRadius} min={0} max={30} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.borderRadius = v), false)} />
+        <span class="card-background-separator">or</span>
+        <Field label="Background image" block hint="Printed behind everything, scaled to cover the card.">
+          <div class="row gap wrap">
+            <button class="btn small" onClick={() => bgInput.click()}>
+              {template.card.bgImage ? 'Replace…' : 'Upload…'}
+            </button>
+            <Show when={template.card.bgImage}>
+              <button class="btn small" onClick={() => updateTemplate((t) => (t.card.bgImage = null))}>
+                Remove
+              </button>
+            </Show>
+          </div>
+          <input
+            ref={bgInput}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={async (e) => {
+              const input = e.currentTarget; // null after the first await
+              const f = input.files?.[0];
+              if (f) {
+                const ref = internImage(await readImageFile(f, 2400));
+                updateTemplate((t) => (t.card.bgImage = ref));
+              }
+              input.value = '';
+            }}
+          />
         </Field>
       </div>
-      <Field label="Background image" block hint="Printed behind everything, scaled to cover the card.">
-        <div class="row gap">
-          <button class="btn small" onClick={() => bgInput.click()}>
-            {template.card.bgImage ? 'Replace…' : 'Upload…'}
-          </button>
-          <Show when={template.card.bgImage}>
-            <button class="btn small" onClick={() => updateTemplate((t) => (t.card.bgImage = null))}>
-              Remove
-            </button>
-          </Show>
-        </div>
-        <input
-          ref={bgInput}
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={async (e) => {
-            const input = e.currentTarget; // null after the first await
-            const f = input.files?.[0];
-            if (f) {
-              const ref = internImage(await readImageFile(f, 2400));
-              updateTemplate((t) => (t.card.bgImage = ref));
-            }
-            input.value = '';
-          }}
-        />
-      </Field>
     </Section>
   );
 }
