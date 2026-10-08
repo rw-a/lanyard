@@ -388,9 +388,10 @@ export default function Designer() {
               <input type="checkbox" checked={grid()} onChange={(e) => setGrid(e.currentTarget.checked)} />
               <span>Grid</span>
             </label>
-            <button class="btn small" classList={{ active: panMode() }} aria-pressed={panMode()} title="Drag the canvas to move the view" onClick={() => setPanMode((v) => !v)}>
-              Move view
-            </button>
+            <label class="toggle small" title="Drag the canvas to move the view">
+              <input type="checkbox" checked={panMode()} onChange={(e) => setPanMode(e.currentTarget.checked)} />
+              <span>Move view</span>
+            </label>
             <span class="sep" />
             <button class="btn icon" title="Zoom out" onClick={() => setZoom((z) => clamp(round(z - 0.1, 0.05), 0.25, 4))}>
               −

@@ -48,8 +48,8 @@ test('touch moves and resizes a box; Move view pans the zoomed canvas', async ({
   await waitForElement(page, 'Name', (el) => el.h < moved.h);
 
   for (let i = 0; i < 8; i++) await page.getByTitle('Zoom in').click();
-  await page.getByRole('button', { name: 'Move view' }).click();
-  await expect(page.getByRole('button', { name: 'Move view' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('checkbox', { name: 'Move view' }).check();
+  await expect(page.getByRole('checkbox', { name: 'Move view' })).toBeChecked();
   const unchanged = await getElement(page, 'Name');
   const area = (await page.locator('.canvas-area').boundingBox())!;
   await touchDrag(cdp, area.x + area.width - 25, area.y + 300, -100, -60);
