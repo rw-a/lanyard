@@ -836,11 +836,22 @@ input.color {
 /* layers */
 .add-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
 }
 .add-grid select {
   grid-column: 1 / -1;
+}
+.add-grid .add-icon {
+  position: relative;
+  min-height: 44px;
+  padding: 6px;
+}
+.add-grid .add-icon > svg:first-child {
+  position: absolute;
+  left: calc(50% - 26px);
+  top: 50%;
+  transform: translateY(-50%);
 }
 .layers {
   list-style: none;

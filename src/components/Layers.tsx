@@ -2,7 +2,7 @@ import { For, Show, createSignal } from 'solid-js';
 import { describeFit, elementLabel, newImageElement, newRectElement, newTextElement } from '../lib/template';
 import { headers, selectedId, setSelectedId, template, updateElement, updateTemplate } from '../lib/store';
 import type { FitStatus, TemplateElement } from '../lib/types';
-import { IconArrowDown, IconArrowUp, IconEye, IconEyeOff, IconImage, IconLock, IconShape, IconText, IconUnlock } from './icons';
+import { IconArrowDown, IconArrowUp, IconEye, IconEyeOff, IconImage, IconLock, IconPlus, IconShape, IconText, IconUnlock } from './icons';
 import { Section } from './ui';
 
 interface Props {
@@ -75,14 +75,17 @@ export default function Layers(props: Props) {
               <For each={headers()}>{(h) => <option value={h}>{h}</option>}</For>
             </select>
           </Show>
-          <button class="btn" onClick={() => add(newTextElement({ content: 'Static text', w: template.card.width - 12, x: 6, y: 10, h: 10 }))}>
-            ＋ Text
+          <button class="btn add-icon" aria-label="Add text" title="Add text" onClick={() => add(newTextElement({ content: 'Static text', w: template.card.width - 12, x: 6, y: 10, h: 10 }))}>
+            <IconPlus size={12} />
+            <IconText size={20} />
           </button>
-          <button class="btn" onClick={() => add(newRectElement({ x: 0, y: template.card.height - 20, w: template.card.width, h: 20 }))}>
-            ＋ Shape
+          <button class="btn add-icon" aria-label="Add shape" title="Add shape" onClick={() => add(newRectElement({ x: 0, y: template.card.height - 20, w: template.card.width, h: 20 }))}>
+            <IconPlus size={12} />
+            <IconShape size={20} />
           </button>
-          <button class="btn" onClick={() => add(newImageElement({ x: 6, y: 6, w: 25, h: 25 }))}>
-            ＋ Image / logo
+          <button class="btn add-icon" aria-label="Add image or logo" title="Add image or logo" onClick={() => add(newImageElement({ x: 6, y: 6, w: 25, h: 25 }))}>
+            <IconPlus size={12} />
+            <IconImage size={20} />
           </button>
         </div>
       </Section>

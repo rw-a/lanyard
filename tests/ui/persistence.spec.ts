@@ -148,10 +148,4 @@ test.describe('Persistence – storage backend', () => {
     await expect(page.getByTestId('persist-warning')).toHaveCount(0);
   });
 
-  test('the inspector says where the state is kept and how much room there is', async ({ page }) => {
-    await loadSample(page);
-    const summary = page.getByTestId('storage-summary');
-    await expect(summary).toContainText('browser database (IndexedDB)');
-    await expect(summary).toContainText(/using [\d.]+ (B|kB|MB) of about [\d.]+ (MB|GB)/);
-  });
 });

@@ -253,11 +253,11 @@ test.describe('Designer – layers panel', () => {
     expect((await getElement(page, 'Role')).kind).toBe('text');
     expect(await canvasTexts(page)).toContain('Camper'); // median Role
 
-    await page.getByRole('button', { name: '＋ Text' }).click();
+    await page.getByRole('button', { name: 'Add text' }).click();
     await expect(page.getByTestId('selection-label')).toContainText('Text');
-    await page.getByRole('button', { name: '＋ Shape' }).click();
+    await page.getByRole('button', { name: 'Add shape' }).click();
     await expect(page.locator('.side.right')).toContainText('Shape');
-    await page.getByRole('button', { name: '＋ Image / logo' }).click();
+    await page.getByRole('button', { name: 'Add image or logo' }).click();
     await expect(page.locator('.side.right')).toContainText('Image');
     await expect(canvasCard(page).locator('.image-placeholder')).toBeVisible();
     await expect(page.locator('[data-testid="layer"]')).toHaveCount(11);

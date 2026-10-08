@@ -215,7 +215,7 @@ export const canvasImage = (page: Page) => canvasCard(page).locator('[data-testi
 export const previewImage = (page: Page, variant: Variant) => preview(page, variant).locator('[data-testid="image"]');
 
 export async function addImageElement(page: Page) {
-  await page.getByRole('button', { name: '＋ Image / logo' }).click();
+  await page.getByRole('button', { name: 'Add image or logo' }).click();
   await expect(layer(page, 'Image')).toHaveClass(/active/);
 }
 

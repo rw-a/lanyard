@@ -37,6 +37,13 @@ export const IconArrowDown = (p: { size?: number }) => (
   </Svg>
 );
 
+export const IconPlus = (p: { size?: number }) => (
+  <Svg size={p.size}>
+    <path d="M12 5v14" />
+    <path d="M5 12h14" />
+  </Svg>
+);
+
 export const IconLock = (p: { size?: number }) => (
   <Svg size={p.size}>
     <rect x="5" y="11" width="14" height="10" rx="2" />

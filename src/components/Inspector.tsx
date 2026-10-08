@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createMemo, createSignal } from 'solid-js';
+import { For, Show, createMemo, createSignal } from 'solid-js';
 import { unwrap } from 'solid-js/store';
 import type { ColorRule, ImageElement, ImageRule, RectElement, TemplateElement, TextElement } from '../lib/types';
 import {
@@ -14,7 +14,6 @@ import {
   pruneAssets,
 } from '../lib/template';
 import { formatBytes, readImageFile } from '../lib/images';
-import { estimateStorage, type StorageEstimate } from '../lib/storage';
 import {
   commit,
   headers,
@@ -24,7 +23,6 @@ import {
   rows,
   selectedElement,
   setSelectedId,
-  storageName,
   template,
   updateElement,
   updateTemplate,
@@ -126,7 +124,6 @@ function CardInspector() {
           Pictures stored: {Object.keys(template.assets).length} ({formatBytes(assetBytes(template.assets))}). The same picture used in several
           places is stored once.
         </p>
-        <StorageSummary />
         <Show when={missingColumns().length > 0}>
           <div class="notice warn small">
             These fields are not in your CSV: {missingColumns().map((c) => `{{${c}}}`).join(', ')}. Select the element and pick a column from
@@ -225,28 +222,6 @@ function CardInspector() {
         </ul>
       </Section>
     </>
-  );
-}
-
-/** Where the state lives and how much room there is. */
-function StorageSummary() {
-  const [est, setEst] = createSignal<StorageEstimate | null>(null);
-  // Re-estimate whenever the stored pictures change (uploads/prunes) – cheap, async.
-  createEffect(() => {
-    Object.keys(template.assets).length;
-    void estimateStorage().then(setEst);
-  });
-  const backend = () => (storageName() === 'indexeddb' ? 'browser database (IndexedDB)' : storageName() === 'localstorage' ? 'localStorage' : 'memory only');
-  return (
-    <p class="muted small" data-testid="storage-summary">
-      Saved in this browser's {backend()}
-      <Show when={est()?.usage != null && est()?.quota != null}>
-        {' '}
-        — using {formatBytes(est()!.usage!)} of about {formatBytes(est()!.quota!)}
-      </Show>
-      <Show when={est()?.persisted === true}>, protected from automatic clean-up</Show>
-      <Show when={storageName() === 'localstorage'}>. This browser blocks the larger database, so only about 5 MB fits</Show>.
-    </p>
   );
 }
 
