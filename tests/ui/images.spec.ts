@@ -18,6 +18,7 @@ import {
 } from './helpers';
 import type { ImageElement } from '../../src/lib/types';
 import { ASSET_PREFIX, imageUrl } from '../../src/lib/template';
+import { formatBytes } from '../../src/lib/images';
 
 const imageEl = async (page: import('@playwright/test').Page) => (await getElement(page, 'Image')) as ImageElement;
 
@@ -280,9 +281,16 @@ test.describe('Images – deduplicated storage', () => {
     await expect(previewImage(page, 'median')).toHaveAttribute('src', bears.dataUrl); // Otters
     await expect(previewImage(page, 'longest')).toHaveAttribute('src', falcons.dataUrl);
 
-    // The inspector's summary agrees (nothing selected shows the template section)
+    // The right panel lists each unique stored picture with its preview and size.
     await page.locator('.canvas-area').click({ position: { x: 5, y: 5 } });
-    await expect(page.getByTestId('asset-summary')).toContainText('Pictures stored: 2');
+    const stored = page.getByTestId('stored-picture');
+    await expect(stored).toHaveCount(2);
+    expect(await stored.locator('img').evaluateAll((images) => images.map((image) => (image as HTMLImageElement).src))).toEqual(
+      expect.arrayContaining([bears.dataUrl, falcons.dataUrl]),
+    );
+    expect(await stored.locator('.stored-picture-size').allTextContents()).toEqual(
+      expect.arrayContaining([formatBytes(bears.buffer.length), formatBytes(falcons.buffer.length)]),
+    );
   });
 
   test('a picture used by two elements is stored once and freed when the last use goes', async ({ page }) => {

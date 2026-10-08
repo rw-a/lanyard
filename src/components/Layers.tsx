@@ -3,6 +3,7 @@ import { describeFit, elementLabel, newImageElement, newRectElement, newTextElem
 import { headers, selectedId, setSelectedId, template, updateElement, updateTemplate } from '../lib/store';
 import type { FitStatus, TemplateElement } from '../lib/types';
 import { IconArrowDown, IconArrowUp, IconEye, IconEyeOff, IconImage, IconLock, IconPlus, IconShape, IconText, IconUnlock } from './icons';
+import TemplateBasics from './TemplateBasics';
 import { Section } from './ui';
 
 interface Props {
@@ -59,6 +60,7 @@ export default function Layers(props: Props) {
 
   return (
     <>
+      <TemplateBasics />
       <Section title="Add">
         <div class="add-grid">
           <Show when={headers().length > 0}>

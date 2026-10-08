@@ -37,12 +37,10 @@ Everything stays in your browser — nothing is uploaded anywhere. State is kept
 Firefox 10 % up to 10 GB, Safari about 1 GB before asking), so templates with many pictures and
 rosters with tens of thousands of rows fit comfortably. The first time pictures are saved the
 app asks the browser to treat the site's storage as persistent so it is not cleaned up under
-disk pressure (Chrome decides silently, Firefox may show a prompt). The Template section of the
-inspector shows which storage is in use, how much of the quota is taken and whether it is
-protected.
+disk pressure (Chrome decides silently, Firefox may show a prompt).
 
 If IndexedDB is unavailable (some private-browsing modes or locked-down browsers) the app falls
-back to localStorage, which only holds about 5 MB, and says so. If a save fails for any reason a
+back to localStorage, which only holds about 5 MB. If a save fails for any reason a
 banner appears at the top — export the template as JSON to keep it. State saved by earlier
 versions in localStorage is migrated automatically on first load.
 
@@ -134,8 +132,8 @@ side (SVGs are kept as-is), and **deduplicated by content**: the same picture us
 groups, on several image elements or as the card background is stored once, however many
 times it appears (`template.assets` holds each picture under a content hash and elements refer
 to it as `asset:<id>`). Pictures nothing refers to any more are dropped at the next save. The
-Template section of the inspector shows how many pictures are stored and their size. Templates
-exported by older versions (pictures inline) import fine and are converted on the way in.
+Template files section of the inspector shows each stored picture with a preview and its size.
+Templates exported by older versions (pictures inline) import fine and are converted on the way in.
 
 When printing, the browser handles the rest: Chromium writes each distinct picture into the PDF
 once, so 100 badges with the same logo cost about as much as one.

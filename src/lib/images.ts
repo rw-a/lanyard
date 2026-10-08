@@ -43,11 +43,13 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Approximate size of a data URL's payload in bytes. */
+/** Size of a base64 data URL's payload in bytes. */
 export function dataUrlBytes(url: string): number {
   const i = url.indexOf(',');
   if (i < 0) return url.length;
-  return Math.floor(((url.length - i - 1) * 3) / 4);
+  const payload = url.slice(i + 1);
+  const padding = payload.endsWith('==') ? 2 : payload.endsWith('=') ? 1 : 0;
+  return Math.floor((payload.length * 3) / 4) - padding;
 }
 
 export function formatBytes(n: number): string {

@@ -14,9 +14,16 @@ import {
   unusedAssetIds,
 } from '../../src/lib/template';
 import type { AssetStore, Template } from '../../src/lib/types';
+import { dataUrlBytes } from '../../src/lib/images';
 
 const A = 'data:image/png;base64,AAAA';
 const B = 'data:image/png;base64,BBBB';
+
+test('dataUrlBytes accounts for base64 padding', () => {
+  expect(dataUrlBytes('data:image/png;base64,YQ==')).toBe(1);
+  expect(dataUrlBytes('data:image/png;base64,YWI=')).toBe(2);
+  expect(dataUrlBytes('data:image/png;base64,YWJj')).toBe(3);
+});
 
 test.describe('hashString', () => {
   test('is stable, fixed-width hex and content-sensitive', () => {

@@ -2,9 +2,7 @@ import { For, Show, createMemo, createSignal } from 'solid-js';
 import { unwrap } from 'solid-js/store';
 import type { ColorRule, ImageElement, ImageRule, RectElement, TemplateElement, TextElement } from '../lib/types';
 import {
-  CARD_PRESETS,
   FONT_FAMILIES,
-  assetBytes,
   buildColorRule,
   buildImageRule,
   defaultTemplate,
@@ -13,7 +11,7 @@ import {
   matchFilesToValues,
   pruneAssets,
 } from '../lib/template';
-import { formatBytes, readImageFile } from '../lib/images';
+import { dataUrlBytes, formatBytes, readImageFile } from '../lib/images';
 import {
   commit,
   headers,
@@ -44,11 +42,7 @@ function CardInspector() {
   let bgInput!: HTMLInputElement;
   let importInput!: HTMLInputElement;
   const [confirmReset, setConfirmReset] = createSignal(false);
-
-  const presetValue = createMemo(() => {
-    const p = CARD_PRESETS.find((p) => p.width === template.card.width && p.height === template.card.height);
-    return p ? p.label : 'custom';
-  });
+  const storedPictures = createMemo(() => Object.entries(template.assets).sort(([a], [b]) => a.localeCompare(b)));
 
   function exportTemplate() {
     const copy = structuredClone(unwrap(template));
@@ -74,10 +68,7 @@ function CardInspector() {
 
   return (
     <>
-      <Section title="Template">
-        <Field label="Name">
-          <TextField value={template.name} onCommit={commit} onInput={(v) => updateTemplate((t) => (t.name = v), false)} />
-        </Field>
+      <Section title="Template files">
         <div class="row gap wrap">
           <button class="btn small" onClick={exportTemplate}>
             Export JSON
@@ -120,53 +111,29 @@ function CardInspector() {
           </Show>
         </div>
         <p class="muted small">The template is saved in this browser automatically. Export it to keep a copy or share it.</p>
-        <p class="muted small" data-testid="asset-summary">
-          Pictures stored: {Object.keys(template.assets).length} ({formatBytes(assetBytes(template.assets))}). The same picture used in several
-          places is stored once.
-        </p>
+        <div data-testid="asset-summary">
+          <h3>Pictures stored</h3>
+          <Show when={storedPictures().length > 0} fallback={<p class="muted small">No pictures stored.</p>}>
+            <ul class="stored-pictures">
+              <For each={storedPictures()}>
+                {([, url], index) => (
+                  <li class="stored-picture" data-testid="stored-picture">
+                    <img class="thumb" src={url} alt={`Stored picture ${index() + 1}`} loading="lazy" />
+                    <span class="stored-picture-name">Picture {index() + 1}</span>
+                    <span class="stored-picture-size">{formatBytes(dataUrlBytes(url))}</span>
+                  </li>
+                )}
+              </For>
+            </ul>
+          </Show>
+          <p class="muted small">The same picture used in several places is stored once.</p>
+        </div>
         <Show when={missingColumns().length > 0}>
           <div class="notice warn small">
             These fields are not in your CSV: {missingColumns().map((c) => `{{${c}}}`).join(', ')}. Select the element and pick a column from
             "Insert field".
           </div>
         </Show>
-      </Section>
-
-      <Section title="Card size">
-        <Field label="Preset">
-          <Select
-            value={presetValue()}
-            options={[{ value: 'custom', label: 'Custom' }, ...CARD_PRESETS.map((p) => ({ value: p.label, label: p.label }))]}
-            onChange={(v) => {
-              const p = CARD_PRESETS.find((p) => p.label === v);
-              if (p)
-                updateTemplate((t) => {
-                  t.card.width = p.width;
-                  t.card.height = p.height;
-                });
-            }}
-          />
-        </Field>
-        <div class="grid2">
-          <Field label="Width">
-            <NumberField value={template.card.width} min={20} max={400} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.width = v), false)} />
-          </Field>
-          <Field label="Height">
-            <NumberField value={template.card.height} min={20} max={400} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.height = v), false)} />
-          </Field>
-        </div>
-        <button
-          class="btn small"
-          onClick={() =>
-            updateTemplate((t) => {
-              const w = t.card.width;
-              t.card.width = t.card.height;
-              t.card.height = w;
-            })
-          }
-        >
-          Swap orientation
-        </button>
       </Section>
 
       <Section title="Card background">

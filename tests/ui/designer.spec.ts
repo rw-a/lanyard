@@ -56,7 +56,8 @@ test.describe('Designer – canvas', () => {
     await expect(page.locator('.side.right')).toContainText('Text box');
     await page.locator('.canvas-area').click({ position: { x: 5, y: 5 } });
     await expect(page.getByTestId('selection')).toBeHidden();
-    await expect(page.locator('.side.right')).toContainText('Card size');
+    await expect(page.locator('.side.left')).toContainText('Card size');
+    await expect(page.locator('.side.right')).toContainText('Template files');
 
     // clicking empty card space (not an element) also deselects
     await canvasCard(page).locator(`.el[data-id="${id}"]`).click();
@@ -449,6 +450,8 @@ test.describe('Designer – inspector', () => {
 
   test('card size presets, custom size, swap orientation and background colour', async ({ page }) => {
     await loadSample(page);
+    await expect(page.locator('.side.left [data-field="Preset"]')).toBeVisible();
+    await expect(page.locator('.side.right [data-field="Preset"]')).toHaveCount(0);
     await field(page, 'Preset').selectOption({ label: 'A7 (74 × 105)' });
     await expect(page.locator('.topbar')).toContainText('74 × 105 mm');
     await setField(page, 'Width', 90);
@@ -463,6 +466,9 @@ test.describe('Designer – inspector', () => {
 
   test('template name is reflected in the top bar; export downloads JSON', async ({ page }) => {
     await loadSample(page);
+    await expect(page.locator('.side.left [data-field="Name"]')).toBeVisible();
+    await expect(page.locator('.side.right [data-field="Name"]')).toHaveCount(0);
+    await expect(page.locator('.side.right').getByRole('button', { name: 'Export JSON' })).toBeVisible();
     await field(page, 'Name').fill('Winter Camp');
     await expect(page.locator('.topbar')).toContainText('Winter Camp');
     const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export JSON' }).click()]);
