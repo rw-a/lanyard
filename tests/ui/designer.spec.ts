@@ -56,7 +56,8 @@ test.describe('Designer – canvas', () => {
     await expect(page.locator('.side.right')).toContainText('Text box');
     await page.locator('.canvas-area').click({ position: { x: 5, y: 5 } });
     await expect(page.getByTestId('selection')).toBeHidden();
-    await expect(page.locator('.side.left')).toContainText('Card size');
+    await expect(page.locator('.side.left')).toContainText('Card settings');
+    await expect(page.locator('.side.left')).toContainText('Card background');
     await expect(page.locator('.side.right')).toContainText('Template files');
 
     // clicking empty card space (not an element) also deselects
@@ -450,6 +451,21 @@ test.describe('Designer – inspector', () => {
 
   test('card size presets, custom size, swap orientation and background colour', async ({ page }) => {
     await loadSample(page);
+    const settings = page.locator('.side.left section').filter({ has: page.getByRole('heading', { name: 'Card settings' }) });
+    await expect(settings).toHaveCount(1);
+    await expect(settings.getByRole('heading', { name: 'Card size' })).toBeVisible();
+    await expect(settings.getByRole('heading', { name: 'Card background' })).toBeVisible();
+    await expect(settings.locator('[data-field="Name"]')).toBeVisible();
+    await expect(settings.locator('[data-field="Background image"]')).toBeVisible();
+    await expect(page.locator('.side.right').getByRole('heading', { name: 'Card background' })).toHaveCount(0);
+    const widthBox = (await settings.locator('[data-field="Width"]').boundingBox())!;
+    const heightBox = (await settings.locator('[data-field="Height"]').boundingBox())!;
+    const swap = settings.getByRole('button', { name: 'Swap orientation' });
+    const swapBox = (await swap.boundingBox())!;
+    expect(Math.abs(widthBox.y - heightBox.y)).toBeLessThan(1);
+    expect(Math.abs(widthBox.y + widthBox.height - swapBox.y - swapBox.height)).toBeLessThan(2);
+    expect(swapBox.x).toBeGreaterThan(heightBox.x);
+    await expect(swap).toHaveText('');
     await expect(page.locator('.side.left [data-field="Preset"]')).toBeVisible();
     await expect(page.locator('.side.right [data-field="Preset"]')).toHaveCount(0);
     await field(page, 'Preset').selectOption({ label: 'A7 (74 × 105)' });
@@ -462,6 +478,10 @@ test.describe('Designer – inspector', () => {
     expect([t.card.width, t.card.height]).toEqual([105, 90]);
     await field(page, 'Colour').fill('#ff0000');
     await expect(canvasCard(page)).toHaveCSS('background-color', 'rgb(255, 0, 0)');
+    await page.setViewportSize({ width: 1000, height: 900 });
+    const narrowHeightBox = (await settings.locator('[data-field="Height"]').boundingBox())!;
+    const narrowSwapBox = (await swap.boundingBox())!;
+    expect(narrowSwapBox.y).toBeGreaterThan(narrowHeightBox.y + narrowHeightBox.height);
   });
 
   test('template name is reflected in the top bar; export downloads JSON', async ({ page }) => {

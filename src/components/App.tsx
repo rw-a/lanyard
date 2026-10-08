@@ -49,7 +49,7 @@ export default function App() {
 
       <Show when={persistError()}>
         <div class="persist-warning" role="alert" data-testid="persist-warning">
-          <strong>Not auto-saved.</strong> {persistError()} Use <em>Export JSON</em> (Design → Template) to keep your work.
+          <strong>Not auto-saved.</strong> {persistError()} Use <em>Export JSON</em> (Design → Template files) to keep your work.
         </div>
       </Show>
 

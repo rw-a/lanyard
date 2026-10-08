@@ -376,6 +376,23 @@ input.color {
 .grid4 {
   grid-template-columns: repeat(4, 1fr);
 }
+.card-settings-subhead {
+  margin: 12px 0 8px;
+  font-size: 12px;
+}
+.card-dimensions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+.card-dimensions .field {
+  flex: 1 1 76px;
+}
+.card-dimensions .btn {
+  flex: 0 0 auto;
+  margin-bottom: 8px;
+}
 
 .toggle {
   display: inline-flex;
