@@ -44,8 +44,9 @@ export default function Previews() {
 
   function fit() {
     if (!strip) return;
-    const avail = strip.clientWidth - 3 * 24;
-    const z = avail / 3 / (template.card.width * PX_PER_MM);
+    const columns = window.matchMedia('(max-width: 860px)').matches ? 1 : 3;
+    const avail = strip.clientWidth - (columns - 1) * 16 - columns * 24;
+    const z = avail / columns / (template.card.width * PX_PER_MM);
     const maxH = Math.min(240, Math.max(140, window.innerHeight * 0.24));
     const byHeight = maxH / (template.card.height * PX_PER_MM);
     setZoom(Math.max(0.15, Math.min(1, z, byHeight)));
@@ -54,7 +55,11 @@ export default function Previews() {
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(strip);
-    onCleanup(() => ro.disconnect());
+    window.addEventListener('resize', fit);
+    onCleanup(() => {
+      ro.disconnect();
+      window.removeEventListener('resize', fit);
+    });
   });
   createEffect(() => {
     template.card.width;

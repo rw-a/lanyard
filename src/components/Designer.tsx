@@ -31,22 +31,36 @@ interface DragState {
   kind: 'move' | 'resize';
   dir?: HandleDir;
   id: string;
+  pointerId: number;
   startX: number;
   startY: number;
   orig: { x: number; y: number; w: number; h: number };
 }
 
+interface PanState {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  scrollX: number;
+  scrollY: number;
+}
+
 export default function Designer() {
   const [zoom, setZoom] = createSignal(1);
+  const [panMode, setPanMode] = createSignal(false);
   const [snap, setSnap] = createSignal(true);
   const [grid, setGrid] = createSignal(true);
   /** Fit status per text element for the card currently on the canvas. */
   const [fitMap, setFitMap] = createSignal<Map<string, FitStatus>>(new Map());
+  const [canvasSize, setCanvasSize] = createSignal({ width: 0, height: 0 });
   let canvasArea!: HTMLDivElement;
   let drag: DragState | null = null;
+  let pan: PanState | null = null;
 
   const cardW = () => template.card.width;
   const cardH = () => template.card.height;
+  const canPan = () =>
+    cardW() * PX_PER_MM * zoom() > canvasSize().width - 24 || cardH() * PX_PER_MM * zoom() > canvasSize().height - 56;
 
   function fitZoom() {
     if (!canvasArea) return;
@@ -57,6 +71,24 @@ export default function Designer() {
     setZoom(clamp(Math.floor(z * 20) / 20, 0.25, 4));
   }
 
+  onMount(() => {
+    const ro = new ResizeObserver(() => {
+      setCanvasSize({ width: canvasArea.clientWidth, height: canvasArea.clientHeight });
+      fitZoom();
+    });
+    ro.observe(canvasArea);
+    onCleanup(() => {
+      ro.disconnect();
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', endDrag);
+      window.removeEventListener('pointercancel', endDrag);
+      window.removeEventListener('pointermove', onPanMove);
+      window.removeEventListener('pointerup', endPan);
+      window.removeEventListener('pointercancel', endPan);
+      document.body.classList.remove('dragging');
+    });
+  });
+
   // Fit the card into view initially and whenever its size changes.
   createEffect(() => {
     cardW();
@@ -65,12 +97,42 @@ export default function Designer() {
   });
 
   // --- pointer interactions -------------------------------------------------
+  function onCanvasPointerDown(e: PointerEvent) {
+    if (!panMode() && (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('canvas-stage'))) setSelectedId(null);
+    if ((!panMode() && e.pointerType !== 'touch') || !canPan() || drag || pan || e.button !== 0) return;
+    e.preventDefault();
+    pan = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      scrollX: canvasArea.scrollLeft,
+      scrollY: canvasArea.scrollTop,
+    };
+    window.addEventListener('pointermove', onPanMove);
+    window.addEventListener('pointerup', endPan);
+    window.addEventListener('pointercancel', endPan);
+  }
+
+  function onPanMove(e: PointerEvent) {
+    if (!pan || e.pointerId !== pan.pointerId) return;
+    canvasArea.scrollLeft = pan.scrollX + pan.startX - e.clientX;
+    canvasArea.scrollTop = pan.scrollY + pan.startY - e.clientY;
+  }
+
+  function endPan(e: PointerEvent) {
+    if (!pan || e.pointerId !== pan.pointerId) return;
+    pan = null;
+    window.removeEventListener('pointermove', onPanMove);
+    window.removeEventListener('pointerup', endPan);
+    window.removeEventListener('pointercancel', endPan);
+  }
+
   function pxToMm(px: number) {
     return px / (PX_PER_MM * zoom());
   }
 
   function onElementPointerDown(e: PointerEvent, el: TemplateElement) {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || drag || panMode()) return;
     e.stopPropagation();
     setSelectedId(el.id);
     beginDrag(e, { kind: 'move', id: el.id, startX: e.clientX, startY: e.clientY, orig: { x: el.x, y: el.y, w: el.w, h: el.h } });
@@ -78,23 +140,23 @@ export default function Designer() {
 
   function onHandlePointerDown(e: PointerEvent, dir: HandleDir) {
     const el = selectedElement();
-    if (!el || e.button !== 0) return;
+    if (!el || e.button !== 0 || drag || panMode()) return;
     e.stopPropagation();
     beginDrag(e, { kind: 'resize', dir, id: el.id, startX: e.clientX, startY: e.clientY, orig: { x: el.x, y: el.y, w: el.w, h: el.h } });
   }
 
-  function beginDrag(e: PointerEvent, state: DragState) {
+  function beginDrag(e: PointerEvent, state: Omit<DragState, 'pointerId'>) {
     e.preventDefault();
     commit();
-    drag = state;
+    drag = { ...state, pointerId: e.pointerId };
     window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', endDrag, { once: true });
-    window.addEventListener('pointercancel', endDrag, { once: true });
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
     document.body.classList.add('dragging');
   }
 
   function onPointerMove(e: PointerEvent) {
-    if (!drag) return;
+    if (!drag || e.pointerId !== drag.pointerId) return;
     const d = drag;
     const step = snap() && !e.altKey ? 1 : 0.1;
     const dx = pxToMm(e.clientX - d.startX);
@@ -152,9 +214,12 @@ export default function Designer() {
     }
   }
 
-  function endDrag() {
+  function endDrag(e: PointerEvent) {
+    if (!drag || e.pointerId !== drag.pointerId) return;
     drag = null;
     window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', endDrag);
+    window.removeEventListener('pointercancel', endDrag);
     document.body.classList.remove('dragging');
   }
 
@@ -289,7 +354,7 @@ export default function Designer() {
   }
   const problemIds = createMemo(() => new Set(fitMap().keys()));
 
-  const handleSizePx = () => 9 / zoom();
+  const handleSizePx = () => (window.matchMedia('(pointer: coarse)').matches ? 28 : 9) / zoom();
 
   return (
     <div class="design-layout">
@@ -323,6 +388,9 @@ export default function Designer() {
               <input type="checkbox" checked={grid()} onChange={(e) => setGrid(e.currentTarget.checked)} />
               <span>Grid</span>
             </label>
+            <button class="btn small" classList={{ active: panMode() }} aria-pressed={panMode()} title="Drag the canvas to move the view" onClick={() => setPanMode((v) => !v)}>
+              Move view
+            </button>
             <span class="sep" />
             <button class="btn icon" title="Zoom out" onClick={() => setZoom((z) => clamp(round(z - 0.1, 0.05), 0.25, 4))}>
               −
@@ -339,9 +407,8 @@ export default function Designer() {
         <div
           ref={canvasArea}
           class="canvas-area"
-          onPointerDown={(e) => {
-            if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('canvas-stage')) setSelectedId(null);
-          }}
+          classList={{ pannable: canPan(), 'pan-mode': panMode() }}
+          onPointerDown={onCanvasPointerDown}
           onWheel={(e) => {
             if (!e.ctrlKey && !e.metaKey) return;
             e.preventDefault();
@@ -361,7 +428,7 @@ export default function Designer() {
               style={{ transform: `scale(${zoom()})`, 'transform-origin': '0 0' }}
               onPointerDown={(e) => {
                 // A press on the card background (not on an element) clears the selection.
-                if ((e.target as HTMLElement).classList.contains('card')) setSelectedId(null);
+                if (!panMode() && (e.target as HTMLElement).classList.contains('card')) setSelectedId(null);
               }}
             >
               <Card
@@ -423,7 +490,12 @@ export default function Designer() {
             </div>
           </div>
           <div class="canvas-caption muted small">
-            {cardW()} × {cardH()} mm · drag to move, drag handles to resize (Shift = keep ratio) · arrows nudge 1 mm · Delete removes · double-click text to edit
+            <span class="caption-desktop">
+              {cardW()} × {cardH()} mm · drag to move, drag handles to resize (Shift = keep ratio) · use Move view to pan the canvas · arrows nudge 1 mm · Delete removes · double-click text to edit
+            </span>
+            <span class="caption-mobile">
+              {cardW()} × {cardH()} mm · drag a box to move it · drag its handles to resize · use Move view to pan
+            </span>
           </div>
         </div>
 
