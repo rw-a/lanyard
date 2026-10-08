@@ -109,29 +109,29 @@ function CardInspector() {
           </Show>
         </div>
         <p class="muted small">The template is saved in this browser automatically. Export it to keep a copy or share it.</p>
-        <div data-testid="asset-summary">
-          <h3>Pictures stored</h3>
-          <Show when={storedPictures().length > 0} fallback={<p class="muted small">No pictures stored.</p>}>
-            <ul class="stored-pictures">
-              <For each={storedPictures()}>
-                {([, url], index) => (
-                  <li class="stored-picture" data-testid="stored-picture">
-                    <img class="thumb" src={url} alt={`Stored picture ${index() + 1}`} loading="lazy" />
-                    <span class="stored-picture-name">Picture {index() + 1}</span>
-                    <span class="stored-picture-size">{formatBytes(dataUrlBytes(url))}</span>
-                  </li>
-                )}
-              </For>
-            </ul>
-          </Show>
-          <p class="muted small">The same picture used in several places is stored once.</p>
-        </div>
         <Show when={missingColumns().length > 0}>
           <div class="notice warn small">
             These fields are not in your CSV: {missingColumns().map((c) => `{{${c}}}`).join(', ')}. Select the element and pick a column from
             "Insert field".
           </div>
         </Show>
+      </Section>
+
+      <Section title="Pictures stored" data-testid="asset-summary">
+        <Show when={storedPictures().length > 0} fallback={<p class="muted small">No pictures stored.</p>}>
+          <ul class="stored-pictures">
+            <For each={storedPictures()}>
+              {([, url], index) => (
+                <li class="stored-picture" data-testid="stored-picture">
+                  <img class="thumb" src={url} alt={`Stored picture ${index() + 1}`} loading="lazy" />
+                  <span class="stored-picture-name">Picture {index() + 1}</span>
+                  <span class="stored-picture-size">{formatBytes(dataUrlBytes(url))}</span>
+                </li>
+              )}
+            </For>
+          </ul>
+        </Show>
+        <p class="muted small">The same picture used in several places is stored once.</p>
       </Section>
 
       <Section title="Tips">
