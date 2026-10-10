@@ -1,10 +1,11 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-solid';
+import { ArrowLeft, ChevronLeft, ChevronRight, MoveHorizontal, MoveVertical } from 'lucide-solid';
 import { Portal } from 'solid-js/web';
 import type { PagePreset, Row } from '../lib/types';
 import { PAGE_PRESETS, PX_PER_MM, computeSheetLayout, type SheetLayout } from '../lib/template';
 import { commit, rows, setTab, template, updateTemplate } from '../lib/store';
 import Card from './Card';
+import { Text } from './park/text';
 import { Field, NumberField, Section, Select, TextField, Toggle, Notice, Button, IconButton } from './ui';
 
 /** Parse "1-10, 15, 20-22" into zero-based row indexes (input is 1-based). */
@@ -142,16 +143,17 @@ export default function PrintPanel() {
             </div>
           </Show>
           <Toggle checked={template.page.landscape} label="Landscape" onChange={(v) => updateTemplate((t) => (t.page.landscape = v))} />
-          <div class="grid3">
-            <Field label="Margin" hint="Most printers need ≥ 5 mm">
-              <NumberField value={template.page.margin} min={0} max={50} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.page.margin = v), false)} />
+          <div class="grid3 paper-spacing-controls">
+            <Field label="Margin">
+              <NumberField value={template.page.margin} min={0} max={50} unit="mm" aria-describedby="paper-margin-hint" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.page.margin = v), false)} />
             </Field>
-            <Field label="Gap ↔">
+            <Field label="Horizontal Gap" labelContent={<>Gap <MoveHorizontal size={14} aria-hidden="true" /></>}>
               <NumberField value={template.page.gapX} min={0} max={50} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.page.gapX = v), false)} />
             </Field>
-            <Field label="Gap ↕">
+            <Field label="Vertical Gap" labelContent={<>Gap <MoveVertical size={14} aria-hidden="true" /></>}>
               <NumberField value={template.page.gapY} min={0} max={50} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.page.gapY = v), false)} />
             </Field>
+            <Text id="paper-margin-hint" textStyle="sm" color="fg.muted" gridColumn="1 / -1" margin="0">Most printers need ≥ 5 mm</Text>
           </div>
         </Section>
 

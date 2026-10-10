@@ -27,12 +27,12 @@ export * as SurfaceCard from './park/card';
 const FieldLabel = createContext<string>();
 
 /** Park UI fields keep labels and hints associated with their controls. */
-export function Field(props: { label: string; hint?: string; children: JSX.Element; inline?: boolean; block?: boolean }) {
+export function Field(props: { label: string; labelContent?: JSX.Element; hint?: string; children: JSX.Element; inline?: boolean; block?: boolean }) {
   return (
     <ParkField.Root class={props.inline ? 'field inline' : 'field'} data-field={props.label}>
       <FieldLabel.Provider value={props.label}>
-        <Show when={props.block} fallback={<ParkField.Label class="field-label">{props.label}</ParkField.Label>}>
-          <ParkField.Label as="span" class="field-label">{props.label}</ParkField.Label>
+        <Show when={props.block} fallback={<ParkField.Label class="field-label" aria-label={props.labelContent ? props.label : undefined}>{props.labelContent ?? props.label}</ParkField.Label>}>
+          <ParkField.Label as="span" class="field-label" aria-label={props.labelContent ? props.label : undefined}>{props.labelContent ?? props.label}</ParkField.Label>
         </Show>
         {props.children}
         <Show when={props.hint}>

@@ -85,10 +85,10 @@ test.describe('Print tab', () => {
 
   test('gaps reduce how many fit and are reflected in card positions', async ({ page }) => {
     await openPrint(page);
-    await setField(page, 'Gap ↔', 10);
+    await setField(page, 'Horizontal Gap', 10);
     await expect(summary(page)).toContainText('1 × 2 = 2 per sheet → 13 sheets');
-    await setField(page, 'Gap ↔', 0);
-    await setField(page, 'Gap ↕', 4);
+    await setField(page, 'Horizontal Gap', 0);
+    await setField(page, 'Vertical Gap', 4);
     await expect(summary(page)).toContainText('2 × 2 = 4 per sheet'); // 2 × 140 + 4 = 284 ≤ 287
     const tops = await page.locator('.sheet-stage .sheet-card').evaluateAll((els) => els.map((e) => (e as HTMLElement).style.top));
     expect(tops[0]).toBe(tops[1]);

@@ -178,6 +178,11 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 .grid3 {
   grid-template-columns: 1fr 1fr 1fr;
 }
+.grid3.paper-spacing-controls {
+  row-gap: 6px;
+  margin-bottom: 12px;
+}
+.paper-spacing-controls .field { margin-bottom: 0; }
 .grid4 {
   grid-template-columns: repeat(4, 1fr);
 }
