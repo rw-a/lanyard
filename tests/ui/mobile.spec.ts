@@ -33,7 +33,7 @@ test('small screens keep every tab within the viewport', async ({ page }) => {
   }
 });
 
-test('touch moves and resizes a box; Move view pans the zoomed canvas', async ({ page }) => {
+test('touch moves and resizes a box; Drag to Pan pans the zoomed canvas', async ({ page }) => {
   await loadSample(page);
   const cdp = await page.context().newCDPSession(page);
   const before = await getElement(page, 'Name');
@@ -48,8 +48,8 @@ test('touch moves and resizes a box; Move view pans the zoomed canvas', async ({
   await waitForElement(page, 'Name', (el) => el.h < moved.h);
 
   for (let i = 0; i < 8; i++) await page.getByTitle('Zoom in').click();
-  await setChecked(page.getByRole('checkbox', { name: 'Move view' }), true);
-  await expect(page.getByRole('checkbox', { name: 'Move view' })).toBeChecked();
+  await setChecked(page.getByRole('checkbox', { name: 'Drag to Pan' }), true);
+  await expect(page.getByRole('checkbox', { name: 'Drag to Pan' })).toBeChecked();
   const unchanged = await getElement(page, 'Name');
   const area = (await page.locator('.canvas-area').boundingBox())!;
   await touchDrag(cdp, area.x + area.width - 25, area.y + 300, -100, -60);

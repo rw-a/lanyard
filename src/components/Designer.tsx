@@ -62,22 +62,21 @@ export default function Designer() {
   const cardW = () => template.card.width;
   const cardH = () => template.card.height;
   const canPan = () =>
-    cardW() * PX_PER_MM * zoom() > canvasSize().width - 24 || cardH() * PX_PER_MM * zoom() > canvasSize().height - 56;
+    cardW() * PX_PER_MM * zoom() > canvasSize().width || cardH() * PX_PER_MM * zoom() > canvasSize().height;
 
   function fitZoom() {
     if (!canvasArea) return;
     const areaStyle = getComputedStyle(canvasArea);
-    const captionStyle = canvasCaption && getComputedStyle(canvasCaption);
-    const captionSpace = canvasCaption ? canvasCaption.offsetHeight + parseFloat(captionStyle.marginTop) : 0;
+    const captionSpace = canvasCaption ? canvasCaption.offsetHeight + parseFloat(getComputedStyle(canvasCaption).marginTop) : 0;
     const availW = canvasArea.clientWidth - parseFloat(areaStyle.paddingLeft) - parseFloat(areaStyle.paddingRight);
     const availH = Math.max(1, canvasArea.clientHeight - parseFloat(areaStyle.paddingTop) - parseFloat(areaStyle.paddingBottom) - captionSpace);
+    setCanvasSize({ width: availW, height: availH });
     const z = Math.min(availW / (cardW() * PX_PER_MM), availH / (cardH() * PX_PER_MM));
     setZoom(clamp(Math.floor(z * 20) / 20, 0.25, 4));
   }
 
   onMount(() => {
     const ro = new ResizeObserver(() => {
-      setCanvasSize({ width: canvasArea.clientWidth, height: canvasArea.clientHeight });
       fitZoom();
     });
     ro.observe(canvasArea);
@@ -386,7 +385,7 @@ export default function Designer() {
           <div class="row gap">
             <Toggle checked={snap()} onChange={setSnap} label="Snap" title="Snap positions to whole millimetres (hold Alt to override)" />
             <Toggle checked={grid()} onChange={setGrid} label="Grid" />
-            <Toggle checked={panMode()} onChange={setPanMode} label="Move view" title="Drag the canvas to move the view" />
+            <Toggle checked={panMode()} onChange={setPanMode} label="Drag to Pan" title="Drag the canvas to pan" />
             <span class="sep" />
             <IconButton variant="outline" size="xs" class="btn icon" title="Zoom out" onClick={() => setZoom((z) => clamp(round(z - 0.1, 0.05), 0.25, 4))}>
               <Minus aria-hidden="true" />
@@ -496,10 +495,10 @@ export default function Designer() {
               </div>
               <div ref={canvasCaption} class="canvas-caption muted small">
                 <span class="caption-desktop">
-                  {cardW()} × {cardH()} mm · drag to move, drag handles to resize (Shift = keep ratio) · use Move view to pan the canvas · arrows nudge 1 mm · Delete removes · double-click text to edit
+                  {cardW()} × {cardH()} mm · drag to move, drag handles to resize (Shift = keep ratio) · arrows nudge 1 mm · Delete removes · double-click text to edit
                 </span>
                 <span class="caption-mobile">
-                  {cardW()} × {cardH()} mm · drag a box to move it · drag its handles to resize · use Move view to pan
+                  {cardW()} × {cardH()} mm · drag a box to move it · drag its handles to resize
                 </span>
               </div>
             </div>
