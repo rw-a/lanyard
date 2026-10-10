@@ -77,26 +77,26 @@ test.describe('Top bar', () => {
 test.describe('Design panels', () => {
   test('left and right sections collapse independently and keep their controls', async ({ page }) => {
     await loadSample(page);
-    const settings = page.locator('.side.left .section').filter({ has: page.getByRole('heading', { name: 'Card settings' }) });
-    const files = page.locator('.side.right .section').filter({ has: page.getByRole('heading', { name: 'Template files' }) });
-    const settingsToggle = settings.getByRole('button', { name: 'Card settings' });
-    const filesToggle = files.getByRole('button', { name: 'Template files' });
+    const settings = page.locator('.side.left .section').filter({ has: page.getByRole('heading', { name: 'Card Settings' }) });
+    const files = page.locator('.side.right .section').filter({ has: page.getByRole('heading', { name: 'Template Files' }) });
+    const settingsToggle = settings.getByRole('button', { name: 'Card Settings' });
+    const filesToggle = files.getByRole('button', { name: 'Template Files' });
 
     await settingsToggle.click();
     await expect(settingsToggle).toHaveAttribute('aria-expanded', 'false');
-    await expect(settings.getByText('Card size')).toBeHidden();
+    await expect(settings.getByText('Card Size')).toBeHidden();
     await expect(files.getByRole('button', { name: 'Export JSON' })).toBeVisible();
 
     await filesToggle.click();
     await expect(files.getByRole('button', { name: 'Export JSON' })).toBeHidden();
     await settingsToggle.click();
-    await expect(settings.getByText('Card size')).toBeVisible();
+    await expect(settings.getByText('Card Size')).toBeVisible();
   });
 
   test('sidebar section titles stay on one line', async ({ page }) => {
     await loadSample(page);
     await page.setViewportSize({ width: 900, height: 800 });
-    for (const title of ['Card settings', 'Template files', 'Pictures stored']) {
+    for (const title of ['Card Settings', 'Template Files', 'Pictures Stored']) {
       const toggle = page.getByRole('button', { name: title, exact: true });
       const lines = await toggle.evaluate((element) => {
         const text = [...element.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());

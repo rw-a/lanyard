@@ -2,8 +2,8 @@ import { Show, createMemo } from 'solid-js';
 import { CARD_PRESETS } from '../lib/template';
 import { commit, internImage, template, updateTemplate } from '../lib/store';
 import { readImageFile } from '../lib/images';
-import { IconSwap } from './icons';
-import { ColorField, Field, NumberField, Section, Select, TextField, IconButton, Button } from './ui';
+import { ArrowLeftRight } from 'lucide-solid';
+import { ColorField, Field, NumberField, Section, Select, TextField, IconButton, Button, Heading } from './ui';
 
 export default function TemplateBasics() {
   let bgInput!: HTMLInputElement;
@@ -13,12 +13,12 @@ export default function TemplateBasics() {
   });
 
   return (
-    <Section title="Card settings" collapsible>
+    <Section title="Card Settings" collapsible>
       <Field label="Name">
         <TextField value={template.name} onCommit={commit} onInput={(v) => updateTemplate((t) => (t.name = v), false)} />
       </Field>
 
-      <h4 class="card-settings-subhead">Card size</h4>
+      <Heading as="h4" textStyle="sm" color="fg.default" class="card-settings-subhead">Card Size</Heading>
       <Field label="Preset">
         <Select
           value={presetValue()}
@@ -54,14 +54,14 @@ export default function TemplateBasics() {
             })
           }
         >
-          <IconSwap size={18} />
+          <ArrowLeftRight size={18} aria-hidden="true" />
         </IconButton>
       </div>
       <Field label="Corner radius">
         <NumberField value={template.card.borderRadius} min={0} max={30} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.borderRadius = v), false)} />
       </Field>
 
-      <h4 class="card-settings-subhead">Card background</h4>
+      <Heading as="h4" textStyle="sm" color="fg.default" class="card-settings-subhead">Card Background</Heading>
       <div class="card-background-controls">
         <Field label="Colour">
           <ColorField value={template.card.bg} onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.bg = v), false)} />

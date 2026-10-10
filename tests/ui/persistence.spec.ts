@@ -63,7 +63,7 @@ test.describe('Persistence', () => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'Drop your CSV here' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Drop Your CSV Here' })).toBeVisible();
     expect(errors).toEqual([]);
   });
 
@@ -139,7 +139,7 @@ test.describe('Persistence – storage backend', () => {
       lines.push(`Person ${String(i).padStart(5, '0')},Cabin ${i % 40},Group ${i % 7},Contact ${i} 555-${String(i % 10_000).padStart(4, '0')}`);
     }
     await page.locator('input[type=file]').first().setInputFiles({ name: 'big.csv', mimeType: 'text/csv', buffer: Buffer.from(lines.join('\n')) });
-    await expect(page.getByText(/big\.csv — 50000 people/)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/big\.csv — 50000 People/)).toBeVisible({ timeout: 20_000 });
     await expect.poll(async () => (await storedGet<Dataset>(page, 'dataset'))?.rows.length, { timeout: 20_000 }).toBe(50_000);
     const json = await page.evaluate(() => JSON.stringify(window.lanyardMaker.getDataset()).length);
     expect(json).toBeGreaterThan(5 * 1024 * 1024);

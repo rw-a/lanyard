@@ -3,6 +3,7 @@ import { For, Show, createContext, createMemo, splitProps, useContext, type JSX 
 import { Portal } from 'solid-js/web';
 import { Input } from './park/input';
 import { Button } from './park/button';
+import { Heading } from './park/heading';
 import * as ParkField from './park/field';
 import * as ParkSelect from './park/select';
 import * as Checkbox from './park/checkbox';
@@ -16,6 +17,7 @@ export { IconButton } from './park/icon-button';
 export { Input } from './park/input';
 export { Textarea } from './park/textarea';
 export { Badge } from './park/badge';
+export { Heading } from './park/heading';
 export * as Table from './park/table';
 export * as Tabs from './park/tabs';
 export * as Splitter from './park/splitter';
@@ -246,18 +248,18 @@ export function Section(props: { title: string; children: JSX.Element; actions?:
     <section class="section" data-testid={props['data-testid']}>
       <Show when={props.collapsible} fallback={
         <>
-          <header class="section-head"><h3>{props.title}</h3>{props.actions}</header>
+          <header class="section-head"><Heading as="h3" textStyle="md" color="fg.default">{props.title}</Heading>{props.actions}</header>
           <div class="section-body">{props.children}</div>
         </>
       }>
         <Accordion.Root collapsible defaultValue={['section']}>
           <Accordion.Item value="section">
-            <h3>
+            <Heading as="h3" textStyle="md" color="fg.default">
               <Accordion.ItemTrigger>
                 {props.title}
                 <Accordion.ItemIndicator />
               </Accordion.ItemTrigger>
-            </h3>
+            </Heading>
             {props.actions}
             <Accordion.ItemContent>
               <Accordion.ItemBody class="section-body">{props.children}</Accordion.ItemBody>

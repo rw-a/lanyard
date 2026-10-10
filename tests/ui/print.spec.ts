@@ -40,11 +40,11 @@ test.describe('Print tab', () => {
     ]);
 
     // Last page holds the remaining 1 card
-    await page.locator('.toolbar .btn.icon', { hasText: '›' }).click({ clickCount: 6 });
+    await page.getByRole('button', { name: 'Next sheet', exact: true }).click({ clickCount: 6 });
     await expect(page.locator('.toolbar')).toContainText('Sheet 7 of 7');
     await expect(sheet.locator('.sheet-card')).toHaveCount(1);
     await expect(sheet.locator('.sheet-card .card')).toContainText('Camp Director');
-    await expect(page.locator('.toolbar .btn.icon', { hasText: '›' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Next sheet', exact: true })).toBeDisabled();
   });
 
   test('crop marks and outlines can be toggled', async ({ page }) => {
@@ -142,7 +142,7 @@ test.describe('Print tab', () => {
 
   test('"Back to design" returns to the Design tab', async ({ page }) => {
     await openPrint(page);
-    await page.getByRole('button', { name: '← Back to design' }).click();
+    await page.getByRole('button', { name: 'Back to design', exact: true }).click();
     await expect(page.getByTestId('tab-design')).toHaveAttribute('aria-selected', 'true');
   });
 

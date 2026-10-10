@@ -1,4 +1,5 @@
 import { For, Show, createMemo, createSignal } from 'solid-js';
+import { X } from 'lucide-solid';
 import { unwrap } from 'solid-js/store';
 import type { ColorRule, ImageElement, ImageRule, RectElement, TemplateElement, TextElement } from '../lib/types';
 import {
@@ -66,7 +67,7 @@ function CardInspector() {
 
   return (
     <>
-      <Section title="Template files" collapsible>
+      <Section title="Template Files" collapsible>
         <div class="row gap wrap">
           <Button variant="outline" size="xs" class="btn small" onClick={exportTemplate}>
             Export JSON
@@ -117,7 +118,7 @@ function CardInspector() {
         </Show>
       </Section>
 
-      <Section title="Pictures stored" data-testid="asset-summary" collapsible>
+      <Section title="Pictures Stored" data-testid="asset-summary" collapsible>
         <Show when={storedPictures().length > 0} fallback={<p class="muted small">No pictures stored.</p>}>
           <ul class="stored-pictures">
             <For each={storedPictures()}>
@@ -161,7 +162,7 @@ function ElementInspector(props: { el: TemplateElement }) {
 
   return (
     <>
-      <Section title={props.el.kind === 'text' ? 'Text box' : props.el.kind === 'rect' ? 'Shape' : 'Image'} collapsible>
+      <Section title={props.el.kind === 'text' ? 'Text Box' : props.el.kind === 'rect' ? 'Shape' : 'Image'} collapsible>
         <Field label="Layer name">
           <TextField value={props.el.name} onCommit={commit} onInput={(v) => set((el) => (el.name = v))} />
         </Field>
@@ -337,7 +338,7 @@ function TextInspector(props: { el: TextElement }) {
         </div>
       </Section>
 
-      <Section title="Colours & box" collapsible>
+      <Section title="Colours & Box" collapsible>
         <div class="grid2">
           <Field label="Text colour">
             <ColorField value={props.el.color} onCommit={commit} onInput={(v) => set((el) => (el.color = v))} />
@@ -644,13 +645,14 @@ function ImageRuleEditor(props: { rule: ImageRule; onChange: (r: ImageRule) => v
                   <Button variant="outline" size="2xs"
                     class="btn tiny"
                     title="Remove this picture"
+                    aria-label="Remove this picture"
                     onClick={() => {
                       const map = { ...props.rule.map };
                       delete map[v];
                       props.onChange({ ...props.rule, map });
                     }}
                   >
-                    ✕
+                    <X aria-hidden="true" />
                   </Button>
                 </Show>
               </span>
@@ -667,8 +669,8 @@ function ImageRuleEditor(props: { rule: ImageRule; onChange: (r: ImageRule) => v
               {props.rule.fallback ? 'Replace' : 'Upload'}
             </Button>
             <Show when={props.rule.fallback}>
-              <Button variant="outline" size="2xs" class="btn tiny" title="Remove the fallback picture" onClick={() => props.onChange({ ...props.rule, fallback: '' })}>
-                ✕
+              <Button variant="outline" size="2xs" class="btn tiny" title="Remove the fallback picture" aria-label="Remove the fallback picture" onClick={() => props.onChange({ ...props.rule, fallback: '' })}>
+                <X aria-hidden="true" />
               </Button>
             </Show>
           </span>

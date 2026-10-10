@@ -1,10 +1,11 @@
 import { button } from 'styled-system/recipes';
+import { Check, TriangleAlert } from 'lucide-solid';
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { PX_PER_MM, elementLabel } from '../lib/template';
 import { extremes, ignoreEmpty, previewSource, rows, setIgnoreEmpty, setPreviewSource, setSelectedId, template, usedColumns } from '../lib/store';
 import { fitProblem, type FitStatus, type Row } from '../lib/types';
 import Card from './Card';
-import { Switch, Table, Collapsible, SurfaceCard } from './ui';
+import { Switch, Table, Collapsible, SurfaceCard, Heading } from './ui';
 
 interface Variant {
   key: 'shortest' | 'median' | 'longest';
@@ -77,7 +78,7 @@ export default function Previews() {
     <section class="previews">
       <header class="previews-head">
         <div class="previews-title">
-          <h3>Fit check</h3>
+          <Heading as="h3" textStyle="md" color="fg.default">Fit Check</Heading>
         </div>
         <p class="muted small">
           <Show when={hasData()} fallback={<>Load a CSV to see your layout filled with the shortest, median and longest values of each field.</>}>
@@ -163,7 +164,7 @@ function PreviewCard(props: { variant: Variant; zoom: number; enabled: boolean }
   return (
     <SurfaceCard.Root class={`preview${hasProblem() ? ' has-overflow' : ''}${!props.enabled ? ' disabled' : ''}`} data-testid={`preview-${props.variant.key}`}>
       <header>
-        <strong>{props.variant.title}</strong>
+        <Heading as="h4" textStyle="sm" color="fg.default">{props.variant.title}</Heading>
         <span class="muted small">{props.variant.blurb}</span>
       </header>
       <div
@@ -193,13 +194,13 @@ function PreviewCard(props: { variant: Variant; zoom: number; enabled: boolean }
       </div>
       <footer class="small" data-testid="preview-status">
         <Show when={props.enabled}>
-          <Show when={hasProblem()} fallback={<span class="ok">✓ Everything fits</span>}>
+          <Show when={hasProblem()} fallback={<span class="ok"><Check size={14} class="preview-status-icon" aria-hidden="true" /> Everything fits</span>}>
             <span class="warn-text">
-              <Show when={overflowNames().length > 0}>⚠ Overflows: {overflowNames().join(', ')}</Show>
+              <Show when={overflowNames().length > 0}><TriangleAlert size={14} class="preview-status-icon" aria-hidden="true" /> Overflows: {overflowNames().join(', ')}</Show>
               <Show when={overflowNames().length > 0 && clippedNames().length > 0}>
                 <br />
               </Show>
-              <Show when={clippedNames().length > 0}>⚠ Cut off by card edge: {clippedNames().join(', ')}</Show>
+              <Show when={clippedNames().length > 0}><TriangleAlert size={14} class="preview-status-icon" aria-hidden="true" /> Cut off by card edge: {clippedNames().join(', ')}</Show>
             </span>
           </Show>
         </Show>

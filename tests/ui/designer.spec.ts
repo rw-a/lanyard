@@ -55,12 +55,12 @@ test.describe('Designer – canvas', () => {
     await canvasCard(page).locator(`.el[data-id="${id}"]`).click();
     await expect(page.getByTestId('selection')).toBeVisible();
     await expect(page.getByTestId('selection-label')).toContainText('Name · 88.0 × 30.0 mm');
-    await expect(page.locator('.side.right')).toContainText('Text box');
+    await expect(page.locator('.side.right')).toContainText('Text Box');
     await page.locator('.canvas-area').click({ position: { x: 5, y: 5 } });
     await expect(page.getByTestId('selection')).toBeHidden();
-    await expect(page.locator('.side.left')).toContainText('Card settings');
-    await expect(page.locator('.side.left')).toContainText('Card background');
-    await expect(page.locator('.side.right')).toContainText('Template files');
+    await expect(page.locator('.side.left')).toContainText('Card Settings');
+    await expect(page.locator('.side.left')).toContainText('Card Background');
+    await expect(page.locator('.side.right')).toContainText('Template Files');
 
     // clicking empty card space (not an element) also deselects
     await canvasCard(page).locator(`.el[data-id="${id}"]`).click();
@@ -287,7 +287,7 @@ test.describe('Designer – layers panel', () => {
 
   test('hovering a layer never moves or resizes any row (no jiggle)', async ({ page }) => {
     await loadSample(page);
-    await page.getByRole('button', { name: 'Card settings', exact: true }).click();
+    await page.getByRole('button', { name: 'Card Settings', exact: true }).click();
     await expect(page.locator('.side.left [data-field="Name"]')).toBeHidden();
     const geometry = () =>
       page.locator('[data-testid="layer"]').evaluateAll((rows) =>
@@ -474,15 +474,15 @@ test.describe('Designer – inspector', () => {
 
   test('card size presets, custom size, swap orientation and background colour', async ({ page }) => {
     await loadSample(page);
-    const settings = page.locator('.side.left section').filter({ has: page.getByRole('heading', { name: 'Card settings' }) });
+    const settings = page.locator('.side.left section').filter({ has: page.getByRole('heading', { name: 'Card Settings' }) });
     await expect(settings).toHaveCount(1);
-    await expect(settings.getByRole('heading', { name: 'Card size' })).toBeVisible();
-    await expect(settings.getByRole('heading', { name: 'Card background' })).toBeVisible();
+    await expect(settings.getByRole('heading', { name: 'Card Size' })).toBeVisible();
+    await expect(settings.getByRole('heading', { name: 'Card Background' })).toBeVisible();
     await expect(settings.locator('[data-field="Name"]')).toBeVisible();
     await expect(settings.locator('[data-field="Background image"]')).toBeVisible();
-    await expect(page.locator('.side.right').getByRole('heading', { name: 'Card background' })).toHaveCount(0);
+    await expect(page.locator('.side.right').getByRole('heading', { name: 'Card Background' })).toHaveCount(0);
     const radiusBox = (await settings.locator('[data-field="Corner radius"]').boundingBox())!;
-    const backgroundHeadingBox = (await settings.getByRole('heading', { name: 'Card background' }).boundingBox())!;
+    const backgroundHeadingBox = (await settings.getByRole('heading', { name: 'Card Background' }).boundingBox())!;
     expect(radiusBox.y + radiusBox.height).toBeLessThan(backgroundHeadingBox.y);
     const colourBox = (await settings.locator('[data-field="Colour"] input[type="color"]').boundingBox())!;
     const separator = settings.locator('.card-background-separator');

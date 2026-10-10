@@ -1,4 +1,5 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-solid';
 import { Portal } from 'solid-js/web';
 import type { PagePreset, Row } from '../lib/types';
 import { PAGE_PRESETS, PX_PER_MM, computeSheetLayout, type SheetLayout } from '../lib/template';
@@ -159,7 +160,7 @@ export default function PrintPanel() {
           <Toggle checked={template.page.outline} label="Thin grey outline around each card" onChange={(v) => updateTemplate((t) => (t.page.outline = v))} />
         </Section>
 
-        <Section title="What to print" collapsible>
+        <Section title="What to Print" collapsible>
           <Field label="Copies of each card" hint="2 = fold-over or back-to-back in a double-sided holder">
             <NumberField value={template.page.copies} min={1} max={10} step={1} onCommit={commit} onInput={(v) => updateTemplate((t) => (t.page.copies = Math.max(1, Math.round(v))), false)} />
           </Field>
@@ -210,19 +211,19 @@ export default function PrintPanel() {
         <div class="toolbar">
           <div class="row gap">
             <Button variant="outline" size="md" class="btn" onClick={() => setTab('design')}>
-              ← Back to design
+              <ArrowLeft aria-hidden="true" /> Back to design
             </Button>
           </div>
           <Show when={pages().length > 0}>
             <div class="row gap">
-              <IconButton variant="outline" size="xs" class="btn icon" disabled={pageIndex() === 0} onClick={() => setPageIndex((i) => i - 1)}>
-                ‹
+              <IconButton variant="outline" size="xs" class="btn icon" aria-label="Previous sheet" disabled={pageIndex() === 0} onClick={() => setPageIndex((i) => i - 1)}>
+                <ChevronLeft aria-hidden="true" />
               </IconButton>
               <span class="small">
                 Sheet {pageIndex() + 1} of {pages().length}
               </span>
-              <IconButton variant="outline" size="xs" class="btn icon" disabled={pageIndex() >= pages().length - 1} onClick={() => setPageIndex((i) => i + 1)}>
-                ›
+              <IconButton variant="outline" size="xs" class="btn icon" aria-label="Next sheet" disabled={pageIndex() >= pages().length - 1} onClick={() => setPageIndex((i) => i + 1)}>
+                <ChevronRight aria-hidden="true" />
               </IconButton>
             </div>
           </Show>

@@ -2,7 +2,19 @@ import { For, Show, createSignal } from 'solid-js';
 import { describeFit, elementLabel, newImageElement, newRectElement, newTextElement } from '../lib/template';
 import { headers, selectedId, setSelectedId, template, updateElement, updateTemplate } from '../lib/store';
 import type { FitStatus, TemplateElement } from '../lib/types';
-import { IconArrowDown, IconArrowUp, IconEye, IconEyeOff, IconImage, IconLock, IconPlus, IconShape, IconText, IconUnlock } from './icons';
+import {
+  ArrowDown as IconArrowDown,
+  ArrowUp as IconArrowUp,
+  CircleAlert,
+  Eye as IconEye,
+  EyeOff as IconEyeOff,
+  Image as IconImage,
+  Lock as IconLock,
+  LockOpen as IconUnlock,
+  Plus as IconPlus,
+  RectangleHorizontal as IconShape,
+  Type as IconText,
+} from 'lucide-solid';
 import TemplateBasics from './TemplateBasics';
 import { Section, IconButton, Button, Select } from './ui';
 
@@ -67,23 +79,23 @@ export default function Layers(props: Props) {
             <Select
               label="Add field from CSV"
               value={fieldPick()}
-              placeholder="＋ Field from CSV…"
+              placeholder="Field from CSV…"
               options={headers().map((h) => ({ value: h, label: h }))}
               onChange={addField}
               onSelectionComplete={() => (document.activeElement as HTMLElement)?.blur()}
             />
           </Show>
           <IconButton variant="outline" size="xs" class="btn add-icon" aria-label="Add text" title="Add text" onClick={() => add(newTextElement({ content: 'Static text', w: template.card.width - 12, x: 6, y: 10, h: 10 }))}>
-            <IconPlus size={12} />
-            <IconText size={20} />
+            <IconPlus aria-hidden="true" size={12} />
+            <IconText aria-hidden="true" size={20} />
           </IconButton>
           <IconButton variant="outline" size="xs" class="btn add-icon" aria-label="Add shape" title="Add shape" onClick={() => add(newRectElement({ x: 0, y: template.card.height - 20, w: template.card.width, h: 20 }))}>
-            <IconPlus size={12} />
-            <IconShape size={20} />
+            <IconPlus aria-hidden="true" size={12} />
+            <IconShape aria-hidden="true" size={20} />
           </IconButton>
           <IconButton variant="outline" size="xs" class="btn add-icon" aria-label="Add image or logo" title="Add image or logo" onClick={() => add(newImageElement({ x: 6, y: 6, w: 25, h: 25 }))}>
-            <IconPlus size={12} />
-            <IconImage size={20} />
+            <IconPlus aria-hidden="true" size={12} />
+            <IconImage aria-hidden="true" size={20} />
           </IconButton>
         </div>
       </Section>
@@ -106,7 +118,7 @@ export default function Layers(props: Props) {
                 <span class="layer-kind" title={KIND_NAME[el.kind]}>
                   {(() => {
                     const Icon = KIND_ICON[el.kind];
-                    return <Icon size={14} />;
+                    return <Icon aria-hidden="true" size={14} />;
                   })()}
                 </span>
                 <span class="layer-name">
@@ -114,7 +126,7 @@ export default function Layers(props: Props) {
                   <Show when={describeFit(props.fitMap.get(el.id))}>
                     {(d) => (
                       <span class="overflow-dot" data-testid="layer-problem" title={`With the current preview data the ${d()}`}>
-                        !
+                        <CircleAlert size={14} aria-hidden="true" />
                       </span>
                     )}
                   </Show>
@@ -122,10 +134,10 @@ export default function Layers(props: Props) {
                 {/* Always-visible state markers, so a locked/hidden layer is recognisable without hovering. */}
                 <span class="layer-flags" aria-hidden="true">
                   <Show when={el.locked}>
-                    <IconLock size={13} />
+                    <IconLock aria-hidden="true" size={13} />
                   </Show>
                   <Show when={el.hidden}>
-                    <IconEyeOff size={13} />
+                    <IconEyeOff aria-hidden="true" size={13} />
                   </Show>
                 </span>
                 {/* Overlaid on the right of the row and faded in on hover/focus: never changes the row's size. */}
@@ -134,13 +146,13 @@ export default function Layers(props: Props) {
                       e.stopPropagation();
                       move(el.id, +1);
                     }}>
-                    <IconArrowUp />
+                    <IconArrowUp aria-hidden="true" />
                   </IconButton>
                   <IconButton variant="plain" size="2xs" type="button" class="icon-btn" title="Move down (towards the back)" aria-label={`Move ${el.name} down`} onClick={(e) => {
                       e.stopPropagation();
                       move(el.id, -1);
                     }}>
-                    <IconArrowDown />
+                    <IconArrowDown aria-hidden="true" />
                   </IconButton>
                   <IconButton variant="plain" size="2xs"
                     type="button"
@@ -153,8 +165,8 @@ export default function Layers(props: Props) {
                       updateElement(el.id, (x) => (x.locked = !x.locked));
                     }}
                   >
-                    <Show when={el.locked} fallback={<IconUnlock />}>
-                      <IconLock />
+                    <Show when={el.locked} fallback={<IconUnlock aria-hidden="true" />}>
+                      <IconLock aria-hidden="true" />
                     </Show>
                   </IconButton>
                   <IconButton variant="plain" size="2xs"
@@ -168,8 +180,8 @@ export default function Layers(props: Props) {
                       updateElement(el.id, (x) => (x.hidden = !x.hidden));
                     }}
                   >
-                    <Show when={el.hidden} fallback={<IconEye />}>
-                      <IconEyeOff />
+                    <Show when={el.hidden} fallback={<IconEye aria-hidden="true" />}>
+                      <IconEyeOff aria-hidden="true" />
                     </Show>
                   </IconButton>
                 </span>

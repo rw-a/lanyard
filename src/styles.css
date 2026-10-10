@@ -46,14 +46,6 @@ body.dragging {
 h2,
 h3 {
   margin: 0 0 6px;
-  font-weight: 600;
-}
-h2 {
-  font-size: 18px;
-}
-h3 {
-  font-size: 16px;
-  color: var(--text);
 }
 p {
   margin: 0 0 8px;
@@ -187,7 +179,6 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 }
 .card-settings-subhead {
   margin: 12px 0 8px;
-  font-size: 12px;
 }
 .card-dimensions {
   display: flex;
@@ -231,6 +222,12 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 
 .section {
   padding: 12px 14px;
+}
+.side .section {
+  padding-block: 0;
+}
+.side .section-body {
+  padding-bottom: 8px;
 }
 .section-head {
   display: flex;
@@ -297,7 +294,7 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
-  margin-top: 16px;
+  margin-top: 12px;
 }
 .table-wrap {
   overflow: auto;
@@ -666,15 +663,14 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   width: 14px;
   height: 14px;
   flex: 0 0 14px;
-  border-radius: 50%;
-  background: var(--danger);
-  color: #fff;
+  color: var(--danger);
   font-size: 10px;
   font-weight: 700;
   margin-left: 6px;
   line-height: 1;
 }
 .tips {
+  list-style: disc;
   margin: 0;
   padding-left: 16px;
 }
@@ -780,10 +776,6 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 }
 .previews-head h3 {
   margin: 0;
-  color: var(--text);
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 15px;
 }
 .previews-strip {
   display: grid;
@@ -830,6 +822,10 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 }
 .preview footer {
   min-height: 16px;
+}
+.preview-status-icon {
+  display: inline-block;
+  vertical-align: -2px;
 }
 .previews-options {
   display: flex;

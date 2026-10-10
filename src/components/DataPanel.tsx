@@ -1,8 +1,9 @@
 import { For, Show, createMemo, createSignal } from 'solid-js';
+import { ArrowRight, Upload } from 'lucide-solid';
 import { SAMPLE_CSV, parseCsv, readFileAsText } from '../lib/csv';
 import { columnStats } from '../lib/stats';
 import { dataset, ignoreEmpty, setDataset, setIgnoreEmpty, setTab, template, usedColumns } from '../lib/store';
-import { Section, Switch, Button, Textarea, Notice, Badge, Table } from './ui';
+import { Section, Switch, Button, Textarea, Notice, Badge, Table, Heading } from './ui';
 
 export default function DataPanel() {
   const [warnings, setWarnings] = createSignal<string[]>([]);
@@ -66,13 +67,9 @@ export default function DataPanel() {
             }}
           />
           <div class="dropzone-icon" aria-hidden="true">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
-              <path d="M12 3v12" />
-              <path d="m7 8 5-5 5 5" />
-            </svg>
+            <Upload size={40} />
           </div>
-          <h2>Drop your CSV here</h2>
+          <Heading as="h2" textStyle="xl" color="fg.default">Drop Your CSV Here</Heading>
           <p class="muted">
             First row must be the column headers (e.g. <code>Name, Accommodation, Group</code>). Comma, semicolon and tab separated files all
             work. Nothing is uploaded anywhere — everything stays in your browser.
@@ -129,14 +126,14 @@ export default function DataPanel() {
           {(ds) => (
             <>
               <Section
-                title={`${ds().fileName} — ${ds().rows.length} ${ds().rows.length === 1 ? 'person' : 'people'}, ${ds().headers.length} columns`}
+                title={`${ds().fileName} — ${ds().rows.length} ${ds().rows.length === 1 ? 'Person' : 'People'}, ${ds().headers.length} Columns`}
                 actions={
                   <div class="row gap">
                     <Button variant="outline" size="md" class="btn" onClick={() => setDataset(null)}>
                       Remove data
                     </Button>
                     <Button size="md" class="btn primary" onClick={() => setTab('design')}>
-                      Design the badge →
+                      Design the badge <ArrowRight aria-hidden="true" />
                     </Button>
                   </div>
                 }
@@ -184,7 +181,7 @@ export default function DataPanel() {
               </Section>
 
               <Section
-                title="Text length per column"
+                title="Text Length per Column"
                 actions={
                   <Switch
                     checked={ignoreEmpty()}

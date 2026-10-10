@@ -1,4 +1,5 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { Minus, Plus, Redo2, Undo2 } from 'lucide-solid';
 import { fitProblem, type FitStatus, type PreviewSource, type TemplateElement } from '../lib/types';
 import { PX_PER_MM, clamp, describeFit, outsideCard, round } from '../lib/template';
 import {
@@ -369,10 +370,10 @@ export default function Designer() {
         <div class="toolbar">
           <div class="row gap">
             <IconButton variant="outline" size="xs" class="btn icon" title="Undo (Ctrl+Z)" disabled={!canUndo()} onClick={undo}>
-              ↶
+              <Undo2 aria-hidden="true" />
             </IconButton>
             <IconButton variant="outline" size="xs" class="btn icon" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo()} onClick={redo}>
-              ↷
+              <Redo2 aria-hidden="true" />
             </IconButton>
             <span class="sep" />
             <label class="row gap-s small">
@@ -388,13 +389,13 @@ export default function Designer() {
             <Toggle checked={panMode()} onChange={setPanMode} label="Move view" title="Drag the canvas to move the view" />
             <span class="sep" />
             <IconButton variant="outline" size="xs" class="btn icon" title="Zoom out" onClick={() => setZoom((z) => clamp(round(z - 0.1, 0.05), 0.25, 4))}>
-              −
+              <Minus aria-hidden="true" />
             </IconButton>
             <Button variant="outline" size="2xs" class="btn tiny" title="Fit to view" onClick={fitZoom}>
               {Math.round(zoom() * 100)}%
             </Button>
             <IconButton variant="outline" size="xs" class="btn icon" title="Zoom in" onClick={() => setZoom((z) => clamp(round(z + 0.1, 0.05), 0.25, 4))}>
-              +
+              <Plus aria-hidden="true" />
             </IconButton>
           </div>
         </div>
