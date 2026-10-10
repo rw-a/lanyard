@@ -27,7 +27,7 @@ import {
   template,
   updateElement,
 } from '../lib/store';
-import { ColorField, Field, NumberField, SegButtons, Section, Select, TextField, Toggle, Button, Notice, Textarea, Input } from './ui';
+import { ColorField, Field, NumberField, SegButtons, Section, Select, TextField, Toggle, Button, Notice, Textarea, Input, PictureControl } from './ui';
 
 export default function Inspector() {
   return (
@@ -455,19 +455,7 @@ function ImageInspector(props: { el: ImageElement }) {
 
       <Show when={mode() === 'fixed'}>
         <Field label="Picture" block hint="PNG/JPG/SVG. Stored inside the template (large photos are scaled down).">
-          <div class="row gap">
-            <Show when={props.el.src}>
-              <img class="thumb" src={imageUrl(template.assets, props.el.src)} alt="" />
-            </Show>
-            <Button variant="outline" size="xs" class="btn small" onClick={() => input.click()}>
-              {props.el.src ? 'Replace…' : 'Upload…'}
-            </Button>
-            <Show when={props.el.src}>
-              <Button variant="outline" size="xs" class="btn small" onClick={() => set((el) => (el.src = ''), true)}>
-                Remove
-              </Button>
-            </Show>
-          </div>
+          <PictureControl url={imageUrl(template.assets, props.el.src)} what="picture" onPick={() => input.click()} onRemove={() => set((el) => (el.src = ''), true)} />
           <input
             ref={input}
             type="file"

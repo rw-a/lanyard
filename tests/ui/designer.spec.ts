@@ -501,7 +501,7 @@ test.describe('Designer – inspector', () => {
     const separatorBox = (await separator.boundingBox())!;
     expect(separatorBox.height).toBeGreaterThan(colourBox.height);
     expect(separatorBox.width).toBeLessThan(separatorBox.height);
-    const uploadBox = (await settings.getByRole('button', { name: 'Upload…' }).boundingBox())!;
+    const uploadBox = (await settings.getByRole('button', { name: 'Upload background image' }).boundingBox())!;
     expect(Math.abs(colourBox.y - uploadBox.y)).toBeLessThan(2);
     expect(separatorBox.x).toBeGreaterThan(colourBox.x + colourBox.width);
     expect(uploadBox.x).toBeGreaterThan(separatorBox.x + separatorBox.width);
@@ -534,7 +534,7 @@ test.describe('Designer – inspector', () => {
     expect(narrowSwapBox.y).toBeGreaterThan(narrowHeightBox.y + narrowHeightBox.height);
     const narrowColourBox = (await settings.locator('[data-field="Background Colour"] input[type="color"]').boundingBox())!;
     const narrowSeparatorBox = (await separator.boundingBox())!;
-    const narrowUploadBox = (await settings.getByRole('button', { name: 'Upload…' }).boundingBox())!;
+    const narrowUploadBox = (await settings.getByRole('button', { name: 'Upload background image' }).boundingBox())!;
     expect(Math.abs(narrowColourBox.y - narrowUploadBox.y)).toBeLessThan(2);
     expect(narrowSeparatorBox.x).toBeGreaterThan(narrowColourBox.x + narrowColourBox.width);
     expect(narrowUploadBox.x).toBeGreaterThan(narrowSeparatorBox.x + narrowSeparatorBox.width);
