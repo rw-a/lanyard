@@ -1,5 +1,5 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
-import { Minus, Plus, Redo2, Undo2 } from 'lucide-solid';
+import { GripHorizontal, Minus, Plus, Redo2, Undo2 } from 'lucide-solid';
 import { fitProblem, type FitStatus, type PreviewSource, type TemplateElement } from '../lib/types';
 import { PX_PER_MM, clamp, describeFit, outsideCard, round } from '../lib/template';
 import {
@@ -505,7 +505,9 @@ export default function Designer() {
             </div>
 
           </Splitter.Panel>
-          <Splitter.ResizeTrigger id="editor:previews" class="previews-divider" aria-label="Resize card previews and template editor" />
+          <Splitter.ResizeTrigger id="editor:previews" class="previews-divider" aria-label="Resize card previews and template editor">
+            <GripHorizontal size={12} aria-hidden="true" />
+          </Splitter.ResizeTrigger>
           <Splitter.Panel id="previews" class="previews-panel" p="0" borderWidth="0" borderRadius="0" minHeight="0" overflow="hidden">
             <Previews />
           </Splitter.Panel>
