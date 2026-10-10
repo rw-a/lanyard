@@ -29,7 +29,7 @@ Built with [SolidJS](https://www.solidjs.com/), [Park UI](https://park-ui.com/),
    or just a few rows for reprints.
 
 The template and roster are saved in your browser automatically and the template can be
-exported/imported as JSON.
+exported/imported as JSON. Exports use the filename `template.lanyard.json`.
 
 ## Where your work is saved
 

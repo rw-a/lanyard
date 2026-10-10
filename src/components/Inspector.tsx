@@ -49,7 +49,7 @@ function CardInspector() {
     const blob = new Blob([JSON.stringify(copy, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `${template.name.replace(/[^\w-]+/g, '_') || 'template'}.lanyard.json`;
+    a.download = 'template.lanyard.json';
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }

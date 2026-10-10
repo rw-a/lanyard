@@ -35,10 +35,6 @@ export default function App() {
           <Tabs.Indicator />
         </Tabs.List>
         <div class="topbar-right muted small" data-testid="topbar-info">
-          <span class="template-name" title={template.name}>
-            {template.name}
-          </span>
-          <span class="sep" />
           <span class="card-size">
             {template.card.width} × {template.card.height} mm
           </span>

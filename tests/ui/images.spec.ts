@@ -357,16 +357,18 @@ test.describe('Images – deduplicated storage', () => {
 
     // Build a version-1 template by hand: pictures inline, the same one twice
     const v1 = { ...exported, version: 1, assets: undefined, name: 'Old style' };
+    v1.card.width = 86;
     for (const el of v1.elements) if (el.kind === 'image') el.src = logo.dataUrl;
     await page.locator('input[type=file][accept*="json"]').setInputFiles({
       name: 'old.lanyard.json',
       mimeType: 'application/json',
       buffer: Buffer.from(JSON.stringify(v1)),
     });
-    await expect(page.locator('.topbar')).toContainText('Old style');
+    await expect(page.getByTestId('topbar-info')).toHaveText('86 × 140 mm');
     await expect(canvasImage(page)).toHaveCount(2);
     await expect(canvasImage(page).first()).toHaveAttribute('src', logo.dataUrl);
     const t = await getTemplate(page);
+    expect(t).not.toHaveProperty('name');
     expect(t.version).toBe(2);
     expect(Object.keys(t.assets)).toHaveLength(1);
     for (const el of t.elements) if (el.kind === 'image') expect(el.src.startsWith(ASSET_PREFIX)).toBe(true);

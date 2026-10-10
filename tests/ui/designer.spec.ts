@@ -288,7 +288,7 @@ test.describe('Designer – layers panel', () => {
   test('hovering a layer never moves or resizes any row (no jiggle)', async ({ page }) => {
     await loadSample(page);
     await page.getByRole('button', { name: 'Card Settings', exact: true }).click();
-    await expect(page.locator('.side.left [data-field="Name"]')).toBeHidden();
+    await expect(page.locator('.side.left [data-field="Preset"]')).toBeHidden();
     const geometry = () =>
       page.locator('[data-testid="layer"]').evaluateAll((rows) =>
         rows.map((r) => {
@@ -478,7 +478,7 @@ test.describe('Designer – inspector', () => {
     await expect(settings).toHaveCount(1);
     await expect(settings.getByRole('heading', { name: 'Card Size' })).toBeVisible();
     await expect(settings.getByRole('heading', { name: 'Card Background' })).toBeVisible();
-    await expect(settings.locator('[data-field="Name"]')).toBeVisible();
+    await expect(settings.locator('[data-field="Name"]')).toHaveCount(0);
     await expect(settings.locator('[data-field="Background image"]')).toBeVisible();
     await expect(page.locator('.side.right').getByRole('heading', { name: 'Card Background' })).toHaveCount(0);
     const radiusBox = (await settings.locator('[data-field="Corner radius"]').boundingBox())!;
@@ -527,32 +527,31 @@ test.describe('Designer – inspector', () => {
     expect(narrowUploadBox.x).toBeGreaterThan(narrowSeparatorBox.x + narrowSeparatorBox.width);
   });
 
-  test('template name is reflected in the top bar; export downloads JSON', async ({ page }) => {
+  test('export downloads the design as JSON without a card name', async ({ page }) => {
     await loadSample(page);
-    await expect(page.locator('.side.left [data-field="Name"]')).toBeVisible();
-    await expect(page.locator('.side.right [data-field="Name"]')).toHaveCount(0);
+    await expect(page.locator('[data-field="Name"]')).toHaveCount(0);
     await expect(page.locator('.side.right').getByRole('button', { name: 'Export JSON' })).toBeVisible();
-    await field(page, 'Name').fill('Winter Camp');
-    await expect(page.locator('.topbar')).toContainText('Winter Camp');
     const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export JSON' }).click()]);
-    expect(download.suggestedFilename()).toBe('Winter_Camp.lanyard.json');
+    expect(download.suggestedFilename()).toBe('template.lanyard.json');
     const text = await (await download.createReadStream()).toArray().then((chunks) => Buffer.concat(chunks).toString());
     const json = JSON.parse(text);
-    expect(json.name).toBe('Winter Camp');
+    expect(json).not.toHaveProperty('name');
+    expect(json).toEqual(await getTemplate(page));
     expect(json.elements).toHaveLength(7);
   });
 
-  test('import JSON replaces the template', async ({ page }) => {
+  test('import JSON replaces the design and discards an old card name', async ({ page }) => {
     await loadSample(page);
-    const t = await getTemplate(page);
-    t.name = 'Imported';
+    const t = { ...await getTemplate(page), name: 'Imported' };
+    t.card.width = 86;
     t.elements = t.elements.slice(0, 2);
     await page.locator('input[type=file][accept*="json"]').setInputFiles({
       name: 'x.lanyard.json',
       mimeType: 'application/json',
       buffer: Buffer.from(JSON.stringify(t)),
     });
-    await expect(page.locator('.topbar')).toContainText('Imported');
+    await expect(page.getByTestId('topbar-info')).toHaveText('86 × 140 mm');
+    expect(await getTemplate(page)).not.toHaveProperty('name');
     await expect(page.locator('[data-testid="layer"]')).toHaveCount(2);
   });
 

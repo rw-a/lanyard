@@ -143,13 +143,6 @@ code {
 .persist-warning {
   flex: 0 0 auto;
 }
-.template-name {
-  min-width: 0;
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 /* Control layout; visual styles come from Park UI recipes. */
 .btn.wide { width: 100%; margin-top: 6px; }
@@ -179,6 +172,9 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 }
 .card-settings-subhead {
   margin: 12px 0 8px;
+}
+.card-settings-subhead:first-child {
+  margin-top: 0;
 }
 .card-dimensions {
   display: flex;

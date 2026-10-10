@@ -2,7 +2,7 @@ import { For, Show, createMemo, createSignal } from 'solid-js';
 import { ArrowRight, Upload } from 'lucide-solid';
 import { SAMPLE_CSV, parseCsv, readFileAsText } from '../lib/csv';
 import { columnStats } from '../lib/stats';
-import { dataset, ignoreEmpty, setDataset, setIgnoreEmpty, setTab, template, usedColumns } from '../lib/store';
+import { dataset, ignoreEmpty, setDataset, setIgnoreEmpty, setTab, usedColumns } from '../lib/store';
 import { Section, Switch, Button, Textarea, Notice, Badge, Table, Heading } from './ui';
 
 export default function DataPanel() {
@@ -236,8 +236,7 @@ export default function DataPanel() {
 
         <Show when={!dataset()}>
           <Notice class="notice">
-            <strong>Tip:</strong> you can start designing without data — the template "{template.name}" will show placeholder field names until a
-            CSV is loaded.{' '}
+            <strong>Tip:</strong> you can start designing without data — the template will show placeholder field names until a CSV is loaded.{' '}
             <Button variant="plain" size="md" class="link" onClick={() => setTab('design')}>
               Go to Design
             </Button>

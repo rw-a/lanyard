@@ -3,7 +3,7 @@ import { CARD_PRESETS } from '../lib/template';
 import { commit, internImage, template, updateTemplate } from '../lib/store';
 import { readImageFile } from '../lib/images';
 import { ArrowLeftRight } from 'lucide-solid';
-import { ColorField, Field, NumberField, Section, Select, TextField, IconButton, Button, Heading } from './ui';
+import { ColorField, Field, NumberField, Section, Select, IconButton, Button, Heading } from './ui';
 
 export default function TemplateBasics() {
   let bgInput!: HTMLInputElement;
@@ -14,10 +14,6 @@ export default function TemplateBasics() {
 
   return (
     <Section title="Card Settings" collapsible>
-      <Field label="Name">
-        <TextField value={template.name} onCommit={commit} onInput={(v) => updateTemplate((t) => (t.name = v), false)} />
-      </Field>
-
       <Heading as="h4" textStyle="sm" color="fg.default" class="card-settings-subhead">Card Size</Heading>
       <Field label="Preset">
         <Select

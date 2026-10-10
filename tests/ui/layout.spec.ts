@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { field, goTo, loadSample, openApp, setField } from './helpers';
+import { goTo, loadSample, openApp, setField } from './helpers';
 
 /** Horizontal centre of the step tabs minus the centre of the window (px). */
 async function tabsOffCentre(page: Page): Promise<number> {
@@ -13,18 +13,10 @@ async function tabPositions(page: Page): Promise<number[]> {
 }
 
 test.describe('Top bar', () => {
-  test('the Data / Design / Print tabs stay centred when the template name or size changes', async ({ page }) => {
+  test('the Data / Design / Print tabs stay centred when the card size changes', async ({ page }) => {
     await loadSample(page);
     expect(Math.abs(await tabsOffCentre(page))).toBeLessThanOrEqual(1);
     const start = await tabPositions(page);
-
-    // Template name: empty, short, very long
-    for (const name of ['', 'X', 'Summer camp badges for the whole of the Lakeside site, version 7 (final, really final)']) {
-      await page.locator('.canvas-area').click({ position: { x: 5, y: 5 } }); // show the Template section
-      await field(page, 'Name').fill(name);
-      await expect(page.getByTestId('topbar-info')).toContainText(name.slice(0, 10));
-      expect(await tabPositions(page), `name "${name.slice(0, 20)}"`).toEqual(start);
-    }
 
     // Card sizes with different digit counts
     for (const [w, h] of [
@@ -40,19 +32,13 @@ test.describe('Top bar', () => {
     }
   });
 
-  test('a long template name is truncated instead of overlapping the tabs', async ({ page }) => {
+  test('card dimensions stay visible beside the tabs', async ({ page }) => {
     await loadSample(page);
-    await page.locator('.canvas-area').click({ position: { x: 5, y: 5 } });
-    const long = 'A remarkably long template name that keeps going and going far beyond any sensible width';
-    await field(page, 'Name').fill(long);
     const tabs = (await page.getByTestId('steps').boundingBox())!;
     const info = (await page.getByTestId('topbar-info').boundingBox())!;
     expect(info.x).toBeGreaterThanOrEqual(tabs.x + tabs.width); // no overlap
     expect(info.x + info.width).toBeLessThanOrEqual(page.viewportSize()!.width);
-    const name = page.locator('.template-name');
-    expect(await name.evaluate((e) => e.scrollWidth > e.clientWidth)).toBe(true); // ellipsised
-    await expect(name).toHaveAttribute('title', long); // full name on hover
-    await expect(page.getByTestId('topbar-info')).toContainText('100 × 140 mm'); // size is never squeezed out
+    await expect(page.getByTestId('topbar-info')).toHaveText('100 × 140 mm');
   });
 
   test('the tabs are centred on every tab and with or without data', async ({ page }) => {

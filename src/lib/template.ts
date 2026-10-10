@@ -141,7 +141,6 @@ export function defaultTemplate(headers: string[] = []): Template {
 
   return {
     version: 2,
-    name: 'Camp badge',
     assets: {},
     card: { width: W, height: H, bg: '#ffffff', bgImage: null, borderRadius: 3 },
     page: {
