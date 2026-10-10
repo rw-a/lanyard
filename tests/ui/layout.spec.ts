@@ -153,3 +153,14 @@ test.describe('Sidebar sections', () => {
     expect(Math.abs(print['Paper'] - print['Cutting'])).toBeLessThanOrEqual(3);
   });
 });
+
+test('number fields show their steppers without hovering (Chrome hides them by default)', async ({ page }) => {
+  await loadSample(page);
+  const input = page.locator('.side.left [data-field="Width"] input');
+  await page.mouse.move(700, 450); // well away from the field
+  const shown = await input.screenshot();
+  // The same field with the steppers forced invisible must look different
+  await page.addStyleTag({ content: '.num::-webkit-inner-spin-button { opacity: 0 !important; }' });
+  const hidden = await input.screenshot();
+  expect(shown.equals(hidden)).toBe(false);
+});

@@ -424,15 +424,17 @@ export default function Designer() {
             <Toggle checked={grid()} onChange={setGrid} label="Grid" />
             <Toggle checked={panMode()} onChange={setPanMode} label="Drag to Pan" title="Drag the canvas to pan" />
             <span class="sep" />
-            <IconButton variant="outline" size="xs" class="btn icon" title="Zoom out" onClick={() => setZoom((z) => clamp(round(z - 0.1, 0.05), 0.25, 4))}>
-              <Minus aria-hidden="true" />
-            </IconButton>
-            <Button variant="outline" size="2xs" class="btn tiny" title="Fit to view" onClick={fitZoom}>
-              {Math.round(zoom() * 100)}%
-            </Button>
-            <IconButton variant="outline" size="xs" class="btn icon" title="Zoom in" onClick={() => setZoom((z) => clamp(round(z + 0.1, 0.05), 0.25, 4))}>
-              <Plus aria-hidden="true" />
-            </IconButton>
+            <span class="zoom-controls" role="group" aria-label="Zoom">
+              <IconButton variant="outline" size="xs" class="btn icon" title="Zoom out" onClick={() => setZoom((z) => clamp(round(z - 0.1, 0.05), 0.25, 4))}>
+                <Minus aria-hidden="true" />
+              </IconButton>
+              <Button variant="outline" size="2xs" class="btn tiny" title="Fit to view" onClick={fitZoom}>
+                {Math.round(zoom() * 100)}%
+              </Button>
+              <IconButton variant="outline" size="xs" class="btn icon" title="Zoom in" onClick={() => setZoom((z) => clamp(round(z + 0.1, 0.05), 0.25, 4))}>
+                <Plus aria-hidden="true" />
+              </IconButton>
+            </span>
           </div>
         </div>
 

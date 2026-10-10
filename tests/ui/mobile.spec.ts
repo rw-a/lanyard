@@ -90,3 +90,26 @@ test('touch moves and resizes a box; Drag to Pan pans the zoomed canvas', async 
   await expect.poll(() => page.locator('.canvas-area').evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
   expect(await getElement(page, 'Name')).toEqual(unchanged);
 });
+
+test('touch screens have no number steppers, so units sit at the right edge', async ({ page }) => {
+  await loadSample(page);
+  const wrap = page.locator('.side.left [data-field="Width"] .num-wrap');
+  const unit = (await wrap.locator('.unit').boundingBox())!;
+  const box = (await wrap.boundingBox())!;
+  expect(box.x + box.width - (unit.x + unit.width)).toBeLessThanOrEqual(12);
+  await expect(wrap.locator('input')).toHaveCSS('padding-right', '30px'); // the value never runs under the unit
+});
+
+test('zoom out, the zoom level and zoom in stay together on narrow screens', async ({ page }) => {
+  await loadSample(page);
+  for (const width of [320, 375]) {
+    await page.setViewportSize({ width, height: 667 });
+    const tops = await Promise.all(
+      [page.getByTitle('Zoom out'), page.getByTitle('Fit to view'), page.getByTitle('Zoom in')].map(async (l) => {
+        const b = (await l.boundingBox())!;
+        return b.y + b.height / 2;
+      }),
+    );
+    expect(Math.max(...tops) - Math.min(...tops), `${width}px`).toBeLessThan(2);
+  }
+});

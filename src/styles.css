@@ -152,6 +152,27 @@ code {
 .num-wrap .unit { position: absolute; right: 26px; font-size: 11px; color: var(--muted); pointer-events: none; }
 .num-wrap.has-unit .num { padding-right: 4px; }
 .num-wrap.has-unit .num::-webkit-inner-spin-button { margin-left: 26px; }
+/* Chrome only shows the steppers while hovering; keep them visible. */
+.num::-webkit-inner-spin-button { opacity: 1; }
+/*
+ * Touch browsers (iOS Safari, Android Chrome) draw no steppers, so the unit moves to
+ * the right edge instead of leaving their gap. iOS is matched separately because an
+ * iPad with a trackpad reports hover support.
+ */
+@media (hover: none) and (pointer: coarse) {
+  .num::-webkit-inner-spin-button,
+  .num::-webkit-outer-spin-button { -webkit-appearance: none; display: none; margin: 0; }
+  .num-wrap .unit { right: 10px; }
+  .num-wrap.has-unit .num { padding-right: 30px; }
+}
+@supports (-webkit-touch-callout: none) {
+  .num::-webkit-inner-spin-button,
+  .num::-webkit-outer-spin-button { -webkit-appearance: none; display: none; margin: 0; }
+  .num-wrap .unit { right: 10px; }
+  .num-wrap.has-unit .num { padding-right: 30px; }
+}
+/* Zoom out, the zoom level and zoom in always stay together on one line. */
+.zoom-controls { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; white-space: nowrap; }
 .color-wrap { display: flex; align-items: center; gap: 6px; }
 input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 .field { margin-bottom: 12px; min-width: 0; }

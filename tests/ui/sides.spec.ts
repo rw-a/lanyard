@@ -537,8 +537,12 @@ test.describe('Sides: keyboard', () => {
     const trigger = page.locator('[data-field="Sides"]').getByRole('combobox');
     await trigger.focus();
     await page.keyboard.press('Enter');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('listbox')).toBeVisible();
+    const highlighted = page.locator('[role="option"][data-highlighted]');
+    for (const label of ['Double-Sided — Same on Both Sides', 'Double-Sided — Different on Each Side']) {
+      await page.keyboard.press('ArrowDown');
+      await expect(highlighted).toHaveText(label);
+    }
     await page.keyboard.press('Enter');
     await expect.poll(async () => (await getTemplate(page)).sidedness).toBe('different');
     await expect(canvasSide(page)).toHaveText('Back');
