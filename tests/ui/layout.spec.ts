@@ -70,13 +70,13 @@ test.describe('Design panels', () => {
 
     await settingsToggle.click();
     await expect(settingsToggle).toHaveAttribute('aria-expanded', 'false');
-    await expect(settings.getByText('Card Size')).toBeHidden();
+    await expect(settings.locator('[data-field="Preset"]')).toBeHidden();
     await expect(files.getByRole('button', { name: 'Export JSON' })).toBeVisible();
 
     await filesToggle.click();
     await expect(files.getByRole('button', { name: 'Export JSON' })).toBeHidden();
     await settingsToggle.click();
-    await expect(settings.getByText('Card Size')).toBeVisible();
+    await expect(settings.locator('[data-field="Preset"]')).toBeVisible();
   });
 
   test('sidebar section titles stay on one line', async ({ page }) => {

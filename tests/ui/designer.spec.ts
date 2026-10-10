@@ -59,7 +59,7 @@ test.describe('Designer – canvas', () => {
     await page.locator('.canvas-area').click({ position: { x: 5, y: 5 } });
     await expect(page.getByTestId('selection')).toBeHidden();
     await expect(page.locator('.side.left')).toContainText('Card Settings');
-    await expect(page.locator('.side.left')).toContainText('Card Background');
+    await expect(page.locator('.side.left')).toContainText('Background Colour');
     await expect(page.locator('.side.right')).toContainText('Template Files');
 
     // clicking empty card space (not an element) also deselects
@@ -476,18 +476,20 @@ test.describe('Designer – inspector', () => {
     await loadSample(page);
     const settings = page.locator('.side.left section').filter({ has: page.getByRole('heading', { name: 'Card Settings' }) });
     await expect(settings).toHaveCount(1);
-    await expect(settings.getByRole('heading', { name: 'Card Size' })).toBeVisible();
-    await expect(settings.getByRole('heading', { name: 'Card Background' })).toBeVisible();
+    await expect(settings.getByRole('heading', { name: 'Card Size' })).toHaveCount(0);
+    await expect(settings.getByRole('heading', { name: 'Card Background' })).toHaveCount(0);
     await expect(settings.locator('[data-field="Name"]')).toHaveCount(0);
-    await expect(settings.locator('[data-field="Background image"]')).toBeVisible();
+    await expect(settings.locator('[data-field="Background Image"]')).toBeVisible();
     await expect(page.locator('.side.right').getByRole('heading', { name: 'Card Background' })).toHaveCount(0);
     const radiusBox = (await settings.locator('[data-field="Corner radius"]').boundingBox())!;
-    const backgroundHeadingBox = (await settings.getByRole('heading', { name: 'Card Background' }).boundingBox())!;
-    expect(radiusBox.y + radiusBox.height).toBeLessThan(backgroundHeadingBox.y);
-    const colourBox = (await settings.locator('[data-field="Colour"] input[type="color"]').boundingBox())!;
+    const backgroundFieldBox = (await settings.locator('[data-field="Background Colour"]').boundingBox())!;
+    expect(radiusBox.y + radiusBox.height).toBeLessThan(backgroundFieldBox.y);
+    const colourBox = (await settings.locator('[data-field="Background Colour"] input[type="color"]').boundingBox())!;
     const separator = settings.locator('.card-background-separator');
-    await expect(separator).toHaveText('or');
+    await expect(separator).toBeVisible();
     const separatorBox = (await separator.boundingBox())!;
+    expect(separatorBox.height).toBeGreaterThan(colourBox.height);
+    expect(separatorBox.width).toBeLessThan(separatorBox.height);
     const uploadBox = (await settings.getByRole('button', { name: 'Upload…' }).boundingBox())!;
     expect(Math.abs(colourBox.y - uploadBox.y)).toBeLessThan(2);
     expect(separatorBox.x).toBeGreaterThan(colourBox.x + colourBox.width);
@@ -513,13 +515,13 @@ test.describe('Designer – inspector', () => {
     await expect(page.locator('.topbar')).toContainText('105 × 90 mm');
     const t = await getTemplate(page);
     expect([t.card.width, t.card.height]).toEqual([105, 90]);
-    await field(page, 'Colour').fill('#ff0000');
+    await field(page, 'Background Colour').fill('#ff0000');
     await expect(canvasCard(page)).toHaveCSS('background-color', 'rgb(255, 0, 0)');
     await page.setViewportSize({ width: 1000, height: 900 });
     const narrowHeightBox = (await settings.locator('[data-field="Height"]').boundingBox())!;
     const narrowSwapBox = (await swap.boundingBox())!;
     expect(narrowSwapBox.y).toBeGreaterThan(narrowHeightBox.y + narrowHeightBox.height);
-    const narrowColourBox = (await settings.locator('[data-field="Colour"] input[type="color"]').boundingBox())!;
+    const narrowColourBox = (await settings.locator('[data-field="Background Colour"] input[type="color"]').boundingBox())!;
     const narrowSeparatorBox = (await separator.boundingBox())!;
     const narrowUploadBox = (await settings.getByRole('button', { name: 'Upload…' }).boundingBox())!;
     expect(Math.abs(narrowColourBox.y - narrowUploadBox.y)).toBeLessThan(2);

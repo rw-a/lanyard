@@ -3,7 +3,7 @@ import { CARD_PRESETS } from '../lib/template';
 import { commit, internImage, template, updateTemplate } from '../lib/store';
 import { readImageFile } from '../lib/images';
 import { ArrowLeftRight } from 'lucide-solid';
-import { ColorField, Field, NumberField, Section, Select, IconButton, Button, Heading } from './ui';
+import { ColorField, Field, NumberField, Section, Select, IconButton, Button } from './ui';
 
 export default function TemplateBasics() {
   let bgInput!: HTMLInputElement;
@@ -14,7 +14,6 @@ export default function TemplateBasics() {
 
   return (
     <Section title="Card Settings" collapsible>
-      <Heading as="h4" textStyle="sm" color="fg.default" class="card-settings-subhead">Card Size</Heading>
       <Field label="Preset">
         <Select
           value={presetValue()}
@@ -57,13 +56,12 @@ export default function TemplateBasics() {
         <NumberField value={template.card.borderRadius} min={0} max={30} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.borderRadius = v), false)} />
       </Field>
 
-      <Heading as="h4" textStyle="sm" color="fg.default" class="card-settings-subhead">Card Background</Heading>
       <div class="card-background-controls">
-        <Field label="Colour">
+        <Field label="Background Colour">
           <ColorField value={template.card.bg} onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.bg = v), false)} />
         </Field>
-        <span class="card-background-separator">or</span>
-        <Field label="Background image" block hint="Printed behind everything, scaled to cover the card.">
+        <span class="card-background-separator" aria-hidden="true" />
+        <Field label="Background Image" block hint="Printed behind everything, scaled to cover the card.">
           <div class="row gap wrap">
             <Button variant="outline" size="xs" class="btn small" onClick={() => bgInput.click()}>
               {template.card.bgImage ? 'Replace…' : 'Upload…'}

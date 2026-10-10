@@ -377,7 +377,7 @@ test.describe('Images – deduplicated storage', () => {
   test('the card background is stored as a picture too', async ({ page }) => {
     await loadSample(page);
     const bg = await makePng(page, 'bg.png', '#eeeeee', 200, 280);
-    await page.locator('[data-field="Background image"] input[type=file]').setInputFiles(bg);
+    await page.locator('[data-field="Background Image"] input[type=file]').setInputFiles(bg);
     await expect(canvasCard(page)).toHaveCSS('background-image', `url("${bg.dataUrl}")`);
     const t = await getTemplate(page);
     expect(t.card.bgImage!.startsWith(ASSET_PREFIX)).toBe(true);

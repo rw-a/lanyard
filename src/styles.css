@@ -170,12 +170,6 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 .grid4 {
   grid-template-columns: repeat(4, 1fr);
 }
-.card-settings-subhead {
-  margin: 12px 0 8px;
-}
-.card-settings-subhead:first-child {
-  margin-top: 0;
-}
 .card-dimensions {
   display: flex;
   flex-wrap: wrap;
@@ -191,7 +185,7 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 }
 .card-background-controls {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
   align-items: flex-start;
   gap: 6px;
 }
@@ -209,11 +203,10 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 }
 .card-background-separator {
   grid-column: 2;
-  grid-row: 2;
-  align-self: center;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 28px;
+  grid-row: 1 / span 3;
+  align-self: stretch;
+  margin-bottom: 12px;
+  background: var(--border);
 }
 
 .section {
