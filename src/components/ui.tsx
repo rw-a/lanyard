@@ -56,7 +56,7 @@ export function NumberField(
 ) {
   const [local, rest] = splitProps(props, ['value', 'onInput', 'onCommit', 'min', 'max', 'step', 'unit']);
   return (
-    <span class="num-wrap">
+    <span class="num-wrap" classList={{ 'has-unit': !!local.unit }}>
       <Input
         type="number"
         size="sm"
