@@ -92,12 +92,36 @@ export interface ImageElement extends BaseElement {
 export type TemplateElement = TextElement | RectElement | ImageElement;
 export type ElementKind = TemplateElement['kind'];
 
-export interface CardSettings {
+/** Size and shape shared by both faces of a badge. */
+export interface CardGeometry {
   width: number; // mm
   height: number; // mm
+  borderRadius: number; // mm
+}
+
+/** Which face of a badge. */
+export type SideId = 'front' | 'back';
+
+/**
+ * How many faces a badge has and where their artwork comes from:
+ *  - `single`: front only
+ *  - `same`: two faces, both printed from the front design
+ *  - `different`: two faces with their own designs
+ */
+export type Sidedness = 'single' | 'same' | 'different';
+
+/**
+ * How a double-sided badge is printed:
+ *  - `cutouts`: front and back side by side on one side of the paper, cut out and paired in a holder
+ *  - `duplex`: fronts on one side of the sheet, backs on the other (printer flips the sheet)
+ */
+export type PrintMethod = 'cutouts' | 'duplex';
+
+/** Everything one independently designed face owns. */
+export interface SideDesign {
   bg: string;
   bgImage: string | null; // `asset:<id>` reference (or a legacy data URL)
-  borderRadius: number; // mm
+  elements: TemplateElement[];
 }
 
 export type PagePreset = 'A4' | 'A3' | 'Letter' | 'Legal' | 'custom';
@@ -112,8 +136,10 @@ export interface PageSettings {
   gapY: number;
   cutMarks: boolean;
   outline: boolean;
-  /** Print every card this many times (2 = fold-over / double-sided holders). */
+  /** Completed badges printed per selected row (each has one face, or two when double-sided). */
   copies: number;
+  /** Only used for double-sided designs; one-sided designs always print ordinary sheets. */
+  printMethod: PrintMethod;
 }
 
 /**
@@ -124,12 +150,23 @@ export interface PageSettings {
  */
 export type AssetStore = Record<string, string>;
 
+/**
+ * Schema history: 1 = one design, pictures inline as data URLs; 2 = one design,
+ * pictures in `assets`; 3 = shared geometry plus front/back side designs.
+ * Older versions are upgraded by `parseTemplate` (template-migrations.ts).
+ */
+export const TEMPLATE_VERSION = 3;
+
 export interface Template {
-  /** 1 = pictures inline as data URLs (legacy), 2 = pictures in `assets`. */
-  version: 2;
-  card: CardSettings;
+  version: typeof TEMPLATE_VERSION;
+  card: CardGeometry;
+  sidedness: Sidedness;
+  sides: {
+    front: SideDesign;
+    /** Kept while unused (single/same) so switching back to `different` restores it; null until first created. */
+    back: SideDesign | null;
+  };
   page: PageSettings;
-  elements: TemplateElement[];
   assets: AssetStore;
 }
 

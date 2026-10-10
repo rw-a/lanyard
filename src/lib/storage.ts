@@ -16,6 +16,8 @@ export const KEYS = {
   dataset: 'dataset',
   /** Marker: the stored template is still the auto-generated starter. */
   pristine: 'template-pristine',
+  /** A stored template this version could not read, kept so it is never silently lost. */
+  recovery: 'template-recovery',
 } as const;
 
 /** Keys used by versions that stored everything in localStorage; migrated on first load. */

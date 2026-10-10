@@ -36,9 +36,9 @@ test.describe('placeholders', () => {
 
   test('columnsUsedBy collects placeholders, colour-rule, image-rule and image-URL columns', () => {
     const t = defaultTemplate(['Name', 'Accommodation', 'Group']);
-    t.elements.push(newRectElement({ colorRule: { column: 'Team', map: {}, fallback: '#000' } }));
-    t.elements.push(newImageElement({ srcColumn: 'Photo' }));
-    t.elements.push(newImageElement({ imageRule: { column: 'Animal', map: {}, fallback: '' } }));
+    t.sides.front.elements.push(newRectElement({ colorRule: { column: 'Team', map: {}, fallback: '#000' } }));
+    t.sides.front.elements.push(newImageElement({ srcColumn: 'Photo' }));
+    t.sides.front.elements.push(newImageElement({ imageRule: { column: 'Animal', map: {}, fallback: '' } }));
     const used = columnsUsedBy(t);
     expect(used).toEqual(expect.arrayContaining(['Name', 'Accommodation', 'Group', 'Team', 'Photo', 'Animal']));
   });
@@ -47,7 +47,7 @@ test.describe('placeholders', () => {
 test.describe('defaultTemplate', () => {
   test('binds common header names for name, accommodation and group', () => {
     const t = defaultTemplate(['Full Name', 'Cabin', 'Team', 'Allergies']);
-    const contents = t.elements.filter((e) => e.kind === 'text').map((e) => (e as { content: string }).content);
+    const contents = t.sides.front.elements.filter((e) => e.kind === 'text').map((e) => (e as { content: string }).content);
     expect(contents).toContain('{{Full Name}}');
     expect(contents).toContain('{{Cabin}}');
     expect(contents).toContain('{{Team}}');
@@ -55,7 +55,7 @@ test.describe('defaultTemplate', () => {
 
   test('combines first and last name columns', () => {
     const t = defaultTemplate(['First name', 'Last name', 'Tent']);
-    const contents = t.elements.filter((e) => e.kind === 'text').map((e) => (e as { content: string }).content);
+    const contents = t.sides.front.elements.filter((e) => e.kind === 'text').map((e) => (e as { content: string }).content);
     expect(contents).toContain('{{First name}} {{Last name}}');
     expect(contents).toContain('{{Tent}}');
   });
@@ -67,12 +67,12 @@ test.describe('defaultTemplate', () => {
 
   test('every element starts inside the card', () => {
     const t = defaultTemplate(['Name']);
-    for (const el of t.elements) expect(outsideCard(el, t.card), el.name).toBe(false);
+    for (const el of t.sides.front.elements) expect(outsideCard(el, t.card), el.name).toBe(false);
   });
 
   test('all element ids are unique', () => {
     const t = defaultTemplate(['Name']);
-    expect(new Set(t.elements.map((e) => e.id)).size).toBe(t.elements.length);
+    expect(new Set(t.sides.front.elements.map((e) => e.id)).size).toBe(t.sides.front.elements.length);
   });
 });
 

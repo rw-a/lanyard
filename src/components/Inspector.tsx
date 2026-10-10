@@ -1,7 +1,7 @@
 import { For, Show, createMemo, createSignal } from 'solid-js';
 import { AlignCenter, AlignLeft, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignVerticalJustifyStart, Bold, CaseUpper, Italic, X } from 'lucide-solid';
 import { unwrap } from 'solid-js/store';
-import type { ColorRule, ImageElement, ImageRule, RectElement, TemplateElement, TextElement } from '../lib/types';
+import type { ColorRule, ImageElement, ImageRule, RectElement, SideId, TemplateElement, TextElement } from '../lib/types';
 import {
   FONT_FAMILIES,
   buildColorRule,
@@ -14,14 +14,16 @@ import {
 } from '../lib/template';
 import { dataUrlBytes, formatBytes, readImageFile } from '../lib/images';
 import {
+  activeSide,
+  beginAsyncEdit,
   commit,
+  findElement,
   headers,
   internImage,
   missingColumns,
   replaceTemplate,
   rows,
   selectedElement,
-  setSelectedId,
   template,
   updateElement,
 } from '../lib/store';
@@ -55,14 +57,16 @@ function CardInspector() {
   }
 
   async function importTemplate(file: File) {
+    let parsed: unknown;
     try {
-      const text = await file.text();
-      const t = JSON.parse(text);
-      replaceTemplate(t);
-      setSelectedId(null);
+      parsed = JSON.parse(await file.text());
     } catch (e) {
       alert(`Could not import template: ${(e as Error).message}`);
+      return;
     }
+    // An unreadable file leaves the current design, selection and undo history untouched.
+    const result = replaceTemplate(parsed);
+    if (!result.ok) alert(`Could not import template: ${result.error}`);
   }
 
   return (
@@ -99,7 +103,6 @@ function CardInspector() {
               onClick={() => {
                 replaceTemplate(defaultTemplate(headers()));
                 setConfirmReset(false);
-                setSelectedId(null);
               }}
             >
               Really reset?
@@ -144,6 +147,10 @@ function CardInspector() {
           </li>
           <li>Use "Colour by field" on a shape to colour-code badges by cabin or group.</li>
           <li>
+            For double-sided badges choose <strong>Sides</strong> in Card Settings: the same design on both sides, or a different back that starts
+            as a copy of the front.
+          </li>
+          <li>
             Add an <strong>Image</strong> and set its picture source to "Different picture per value of a field" to show, say, a bear for the Bears
             and a lion for the Lions. Name your files after the values and upload them all at once.
           </li>
@@ -158,7 +165,8 @@ function CardInspector() {
 // ---------------------------------------------------------------------------
 function ElementInspector(props: { el: TemplateElement }) {
   const id = () => props.el.id;
-  const set = <T extends TemplateElement>(fn: (el: T) => void, record = false) => updateElement<T>(id(), fn, record);
+  // The inspector always shows a layer of the side being edited.
+  const set = <T extends TemplateElement>(fn: (el: T) => void, record = false) => updateElement<T>(activeSide(), id(), fn, record);
 
   return (
     <>
@@ -223,7 +231,7 @@ function ElementInspector(props: { el: TemplateElement }) {
 }
 
 function TextInspector(props: { el: TextElement }) {
-  const set = (fn: (el: TextElement) => void, record = false) => updateElement<TextElement>(props.el.id, fn, record);
+  const set = (fn: (el: TextElement) => void, record = false) => updateElement<TextElement>(activeSide(), props.el.id, fn, record);
   let textarea!: HTMLTextAreaElement;
 
   function insertField(col: string) {
@@ -249,7 +257,7 @@ function TextInspector(props: { el: TextElement }) {
           class="input content"
           rows={3}
           value={props.el.content}
-          onFocus={commit}
+          onFocus={() => commit()}
           onInput={(e) => set((el) => (el.content = e.currentTarget.value))}
           placeholder="Type text and insert {{fields}}"
         />
@@ -370,7 +378,7 @@ function TextInspector(props: { el: TextElement }) {
 }
 
 function RectInspector(props: { el: RectElement }) {
-  const set = (fn: (el: RectElement) => void, record = false) => updateElement<RectElement>(props.el.id, fn, record);
+  const set = (fn: (el: RectElement) => void, record = false) => updateElement<RectElement>(activeSide(), props.el.id, fn, record);
   return (
     <Section title="Appearance" collapsible>
       <Field label="Fill">
@@ -403,7 +411,7 @@ function imageSourceMode(el: ImageElement): ImageSourceMode {
 }
 
 function ImageInspector(props: { el: ImageElement }) {
-  const set = (fn: (el: ImageElement) => void, record = false) => updateElement<ImageElement>(props.el.id, fn, record);
+  const set = (fn: (el: ImageElement) => void, record = false) => updateElement<ImageElement>(activeSide(), props.el.id, fn, record);
   let input!: HTMLInputElement;
   const mode = () => imageSourceMode(props.el);
 
@@ -470,18 +478,23 @@ function ImageInspector(props: { el: ImageElement }) {
             onChange={async (e) => {
               const input = e.currentTarget; // null after the first await
               const f = input.files?.[0];
-              if (f) {
-                const ref = internImage(await readImageFile(f));
-                set((el) => (el.src = ref), true);
-              }
               input.value = '';
+              if (!f) return;
+              // Capture the target before reading: the user may switch sides or layers meanwhile.
+              const side = activeSide();
+              const id = props.el.id;
+              const stillWanted = beginAsyncEdit(side, `${id}:src`);
+              const dataUrl = await readImageFile(f);
+              if (!stillWanted() || !findElement(side, id)) return;
+              const ref = internImage(dataUrl);
+              updateElement<ImageElement>(side, id, (el) => (el.src = ref), true);
             }}
           />
         </Field>
       </Show>
 
       <Show when={mode() === 'rule' && props.el.imageRule}>
-        {(rule) => <ImageRuleEditor rule={rule()} onChange={(r) => set((el) => (el.imageRule = r), true)} />}
+        {(rule) => <ImageRuleEditor elementId={props.el.id} rule={rule()} onChange={(r) => set((el) => (el.imageRule = r), true)} />}
       </Show>
 
       <Show when={mode() === 'column'}>
@@ -518,7 +531,7 @@ function ImageInspector(props: { el: ImageElement }) {
  * "Picture by field": pick a CSV column, then give each distinct value its own
  * image – one at a time, or all at once by uploading files named after the values.
  */
-function ImageRuleEditor(props: { rule: ImageRule; onChange: (r: ImageRule) => void }) {
+function ImageRuleEditor(props: { elementId: string; rule: ImageRule; onChange: (r: ImageRule) => void }) {
   const values = createMemo(() => distinctValues(rows(), props.rule.column));
   const assigned = createMemo(() => values().filter((v) => !!props.rule.map[v]).length);
   const [report, setReport] = createSignal<string | null>(null);
@@ -528,9 +541,47 @@ function ImageRuleEditor(props: { rule: ImageRule; onChange: (r: ImageRule) => v
   let singleInput!: HTMLInputElement;
   let singleTarget = '';
 
-  async function assign(value: string, file: File) {
-    const ref = internImage(await readImageFile(file));
-    props.onChange({ ...props.rule, map: { ...props.rule.map, [value]: ref } });
+  /**
+   * Uploads finish asynchronously, after the user may have switched sides, picked
+   * another layer or changed the rule. Each picture therefore names its target up
+   * front (side, layer, rule column, value) and is applied straight to that layer,
+   * only if the target still exists and no newer upload for it has started.
+   */
+  type Slot = { kind: 'value'; value: string } | { kind: 'fallback' };
+  function target(slot: Slot) {
+    const side: SideId = activeSide();
+    const id = props.elementId;
+    const column = props.rule.column;
+    const stillWanted = beginAsyncEdit(side, `${id}:rule:${slot.kind === 'value' ? `value:${slot.value}` : 'fallback'}`);
+    const live = () => {
+      const el = findElement(side, id);
+      return stillWanted() && el?.kind === 'image' && el.imageRule?.column === column;
+    };
+    return { side, id, live };
+  }
+
+  /** Apply finished uploads (one undo step) to their own layer. */
+  function applyPictures(side: SideId, id: string, slots: { slot: Slot; ref: string }[]) {
+    if (slots.length === 0) return;
+    updateElement<ImageElement>(
+      side,
+      id,
+      (el) => {
+        if (!el.imageRule) return;
+        for (const { slot, ref } of slots) {
+          if (slot.kind === 'value') el.imageRule.map[slot.value] = ref;
+          else el.imageRule.fallback = ref;
+        }
+      },
+      true,
+    );
+  }
+
+  async function upload(slot: Slot, file: File) {
+    const t = target(slot);
+    const dataUrl = await readImageFile(file);
+    if (!t.live()) return;
+    applyPictures(t.side, t.id, [{ slot, ref: internImage(dataUrl) }]);
   }
 
   async function bulkUpload(files: File[]) {
@@ -538,18 +589,26 @@ function ImageRuleEditor(props: { rule: ImageRule; onChange: (r: ImageRule) => v
       files.map((f) => f.name),
       values(),
     );
-    const map = { ...props.rule.map };
     const unmatched: string[] = [];
-    await Promise.all(
-      matches.map(async (m, i) => {
-        if (m.value === null) {
-          unmatched.push(m.fileName);
-          return;
-        }
-        map[m.value] = internImage(await readImageFile(files[i]));
-      }),
-    );
-    props.onChange({ ...props.rule, map });
+    const side = activeSide();
+    const id = props.elementId;
+    const pending = matches.flatMap((m, i) => {
+      if (m.value === null) {
+        unmatched.push(m.fileName);
+        return [];
+      }
+      const slot: Slot = { kind: 'value', value: m.value };
+      return [{ slot, file: files[i], t: target(slot) }];
+    });
+    const read = await Promise.all(pending.map(async (p) => ({ ...p, dataUrl: await readImageFile(p.file) })));
+    const done = read.filter((p) => p.t.live()).map((p) => ({ slot: p.slot, ref: internImage(p.dataUrl) }));
+    applyPictures(side, id, done);
+    const rule = (() => {
+      const el = findElement(side, id);
+      return el?.kind === 'image' ? el.imageRule : null;
+    })();
+    if (!rule) return; // the layer went away meanwhile; its editor is gone too
+    const map = rule.map;
     const matched = matches.length - unmatched.length;
     const stillMissing = values().filter((v) => !map[v]);
     const parts = [`${matched} of ${files.length} ${files.length === 1 ? 'file' : 'files'} matched`];
@@ -596,8 +655,8 @@ function ImageRuleEditor(props: { rule: ImageRule; onChange: (r: ImageRule) => v
           onChange={async (e) => {
               const input = e.currentTarget; // null after the first await
             const files = [...(input.files ?? [])];
-            if (files.length) await bulkUpload(files);
             input.value = '';
+            if (files.length) await bulkUpload(files);
           }}
         />
         <Show when={report()}>
@@ -616,8 +675,8 @@ function ImageRuleEditor(props: { rule: ImageRule; onChange: (r: ImageRule) => v
         onChange={async (e) => {
               const input = e.currentTarget; // null after the first await
           const f = input.files?.[0];
-          if (f) await assign(singleTarget, f);
           input.value = '';
+          if (f) await upload({ kind: 'value', value: singleTarget }, f);
         }}
       />
 
@@ -683,8 +742,8 @@ function ImageRuleEditor(props: { rule: ImageRule; onChange: (r: ImageRule) => v
             onChange={async (e) => {
               const input = e.currentTarget; // null after the first await
               const f = input.files?.[0];
-              if (f) props.onChange({ ...props.rule, fallback: internImage(await readImageFile(f)) });
               input.value = '';
+              if (f) await upload({ kind: 'fallback' }, f);
             }}
           />
         </div>

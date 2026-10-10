@@ -386,6 +386,30 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   align-self: center;
   text-align: center;
 }
+.canvas-side {
+  color: var(--text);
+  font-weight: 600;
+}
+/* Front / Back navigation right above the canvas (only when the sides differ). */
+.side-switcher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  flex-wrap: wrap;
+}
+.side-note {
+  margin: 0;
+}
+.back-actions {
+  margin-top: -2px;
+}
+.print-instructions p {
+  margin: 6px 0 0;
+}
 .caption-mobile {
   display: none;
 }
@@ -886,6 +910,18 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   justify-content: center;
   padding: 20px;
 }
+.sheet-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.sheet-caption {
+  max-width: 60ch;
+  text-align: center;
+  margin: 0;
+}
 .sheet-stage {
   position: relative;
   box-shadow: var(--shadow);
@@ -907,8 +943,16 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 }
 
 /* ---------- printing ---------- */
+/*
+ * While a print run is being prepared the sheets are laid out off-screen at their
+ * real size (not display:none, which would stop text boxes from measuring).
+ */
 .print-root {
-  display: none;
+  position: fixed;
+  left: -100000px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 @media print {
@@ -921,7 +965,8 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
     display: none !important;
   }
   .print-root {
-    display: block;
+    position: static;
+    visibility: visible;
   }
   .print-root .sheet {
     break-after: page;

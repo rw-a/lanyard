@@ -265,7 +265,7 @@ test.describe('Designer – layers panel', () => {
     await layer(page, 'Name').getByTitle(/Move up/).click();
     expect(await names()).toEqual(['Group', 'Group band', 'Accommodation', 'Name', 'Accommodation label', 'Camp title', 'Header band']);
     const t = await getTemplate(page);
-    expect(t.elements.map((e) => e.name).indexOf('Name')).toBeGreaterThan(t.elements.map((e) => e.name).indexOf('Accommodation label'));
+    expect(t.sides.front.elements.map((e) => e.name).indexOf('Name')).toBeGreaterThan(t.sides.front.elements.map((e) => e.name).indexOf('Accommodation label'));
   });
 
   test('adds a CSV field, static text, a shape and an image', async ({ page }) => {
@@ -540,14 +540,14 @@ test.describe('Designer – inspector', () => {
     const json = JSON.parse(text);
     expect(json).not.toHaveProperty('name');
     expect(json).toEqual(await getTemplate(page));
-    expect(json.elements).toHaveLength(7);
+    expect(json.sides.front.elements).toHaveLength(7);
   });
 
   test('import JSON replaces the design and discards an old card name', async ({ page }) => {
     await loadSample(page);
     const t = { ...await getTemplate(page), name: 'Imported' };
     t.card.width = 86;
-    t.elements = t.elements.slice(0, 2);
+    t.sides.front.elements = t.sides.front.elements.slice(0, 2);
     await page.locator('input[type=file][accept*="json"]').setInputFiles({
       name: 'x.lanyard.json',
       mimeType: 'application/json',

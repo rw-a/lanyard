@@ -352,13 +352,20 @@ test.describe('Images – deduplicated storage', () => {
     const payload = logo.dataUrl.split(',')[1];
     expect(text.split(payload).length - 1).toBe(1); // the picture's bytes appear exactly once
     const exported = JSON.parse(text);
-    expect(exported.version).toBe(2);
+    expect(exported.version).toBe(3);
     expect(Object.keys(exported.assets)).toHaveLength(1);
 
-    // Build a version-1 template by hand: pictures inline, the same one twice
-    const v1 = { ...exported, version: 1, assets: undefined, name: 'Old style' };
-    v1.card.width = 86;
-    for (const el of v1.elements) if (el.kind === 'image') el.src = logo.dataUrl;
+    // A real version-1 file: one design, background on the card, pictures inline (the same one twice), a card name
+    const elements = structuredClone(exported.sides.front.elements);
+    for (const el of elements) if (el.kind === 'image') el.src = logo.dataUrl;
+    const { printMethod: _unused, ...legacyPage } = exported.page;
+    const v1 = {
+      version: 1,
+      name: 'Old style',
+      card: { width: 86, height: exported.card.height, borderRadius: exported.card.borderRadius, bg: '#ffffff', bgImage: null },
+      page: legacyPage,
+      elements,
+    };
     await page.locator('input[type=file][accept*="json"]').setInputFiles({
       name: 'old.lanyard.json',
       mimeType: 'application/json',
@@ -369,9 +376,11 @@ test.describe('Images – deduplicated storage', () => {
     await expect(canvasImage(page).first()).toHaveAttribute('src', logo.dataUrl);
     const t = await getTemplate(page);
     expect(t).not.toHaveProperty('name');
-    expect(t.version).toBe(2);
+    expect(t.version).toBe(3);
+    expect(t.sidedness).toBe('single');
+    expect(t.page.printMethod).toBe('cutouts');
     expect(Object.keys(t.assets)).toHaveLength(1);
-    for (const el of t.elements) if (el.kind === 'image') expect(el.src.startsWith(ASSET_PREFIX)).toBe(true);
+    for (const el of t.sides.front.elements) if (el.kind === 'image') expect(el.src.startsWith(ASSET_PREFIX)).toBe(true);
   });
 
   test('the card background is stored as a picture too', async ({ page }) => {
@@ -380,7 +389,7 @@ test.describe('Images – deduplicated storage', () => {
     await page.locator('[data-field="Background Image"] input[type=file]').setInputFiles(bg);
     await expect(canvasCard(page)).toHaveCSS('background-image', `url("${bg.dataUrl}")`);
     const t = await getTemplate(page);
-    expect(t.card.bgImage!.startsWith(ASSET_PREFIX)).toBe(true);
+    expect(t.sides.front.bgImage!.startsWith(ASSET_PREFIX)).toBe(true);
     expect(Object.keys(t.assets)).toHaveLength(1);
     await page.getByRole('button', { name: 'Remove', exact: true }).click();
     await expect(canvasCard(page)).toHaveCSS('background-image', 'none');

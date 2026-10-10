@@ -1,10 +1,13 @@
 import { For, Show, type JSX } from 'solid-js';
-import type { AssetStore, FitStatus, ImageElement, RectElement, Row, Template, TemplateElement } from '../lib/types';
+import type { AssetStore, FitStatus, ImageElement, RectElement, Row, SideId, Template, TemplateElement } from '../lib/types';
 import { imageUrl, resolveFill, resolveImageSrc } from '../lib/template';
+import { getDesignForSide } from '../lib/sides';
 import TextBox from './TextBox';
 
 export interface CardProps {
   template: Template;
+  /** Which face to draw. Its design is resolved from the template (the back of a `same` badge reads the front). */
+  side: SideId;
   row: Row;
   /** Editor mode: show placeholders for empty images, hidden elements stay hidden. */
   editor?: boolean;
@@ -18,45 +21,55 @@ export interface CardProps {
   ref?: (el: HTMLDivElement) => void;
 }
 
-/** Renders one badge card from a template and a data row. Used by the editor, previews and print sheets. */
+/**
+ * Renders one face of a badge from a template and a data row. Used by the editor,
+ * previews and print sheets. A face the template does not have (the back of a
+ * one-sided badge) renders nothing.
+ */
 export default function Card(props: CardProps) {
   const t = () => props.template;
+  const design = () => getDesignForSide(t(), props.side);
   return (
-    <div
-      ref={props.ref}
-      class={`card ${props.class ?? ''}`}
-      style={{
-        position: 'relative',
-        width: `${t().card.width}mm`,
-        height: `${t().card.height}mm`,
-        background: t().card.bg,
-        'background-image': t().card.bgImage ? `url(${imageUrl(t().assets, t().card.bgImage)})` : undefined,
-        'background-size': 'cover',
-        'background-position': 'center',
-        'border-radius': `${t().card.borderRadius}mm`,
-        overflow: 'hidden',
-        'box-sizing': 'border-box',
-        ...props.style,
-      }}
-    >
-      <For each={t().elements}>
-        {(el) => (
-          <Show when={!el.hidden}>
-            <ElementView
-              el={el}
-              row={props.row}
-              editor={props.editor}
-              cardW={t().card.width}
-              cardH={t().card.height}
-              assets={t().assets}
-              onPointerDown={props.onElementPointerDown}
-              onDblClick={props.onElementDblClick}
-              onFit={props.onFit}
-            />
-          </Show>
-        )}
-      </For>
-    </div>
+    <Show when={design()}>
+      {(d) => (
+        <div
+          ref={props.ref}
+          class={`card ${props.class ?? ''}`}
+          data-side={props.side}
+          style={{
+            position: 'relative',
+            width: `${t().card.width}mm`,
+            height: `${t().card.height}mm`,
+            background: d().bg,
+            'background-image': d().bgImage ? `url(${imageUrl(t().assets, d().bgImage)})` : undefined,
+            'background-size': 'cover',
+            'background-position': 'center',
+            'border-radius': `${t().card.borderRadius}mm`,
+            overflow: 'hidden',
+            'box-sizing': 'border-box',
+            ...props.style,
+          }}
+        >
+          <For each={d().elements}>
+            {(el) => (
+              <Show when={!el.hidden}>
+                <ElementView
+                  el={el}
+                  row={props.row}
+                  editor={props.editor}
+                  cardW={t().card.width}
+                  cardH={t().card.height}
+                  assets={t().assets}
+                  onPointerDown={props.onElementPointerDown}
+                  onDblClick={props.onElementDblClick}
+                  onFit={props.onFit}
+                />
+              </Show>
+            )}
+          </For>
+        </div>
+      )}
+    </Show>
   );
 }
 

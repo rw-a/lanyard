@@ -1,4 +1,4 @@
-import type { Dataset, Template } from '../src/lib/types';
+import type { Dataset, SideId, Template } from '../src/lib/types';
 import type { KEYS, KeyValueStorage } from '../src/lib/storage';
 
 declare global {
@@ -6,6 +6,7 @@ declare global {
     lanyardMaker: {
       getTemplate: () => Template;
       getDataset: () => Dataset | null;
+      getEditor: () => { activeSide: SideId; selectedId: string | null };
       flushPersist: () => Promise<boolean>;
       storage: {
         name: () => KeyValueStorage['name'] | null;
