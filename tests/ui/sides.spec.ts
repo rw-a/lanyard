@@ -67,8 +67,8 @@ async function releaseRead(page: Page, index: number) {
 test.describe('Sides: modes', () => {
   test('one-sided by default; same on both sides shows one Front & Back design', async ({ page }) => {
     await loadSample(page);
-    await expect(canvasSide(page)).toHaveText('Front');
-    await expect(page.getByTestId('fit-check-title')).toHaveText('Fit Check — Front');
+    await expect(canvasSide(page)).toHaveCount(0); // one-sided: no side named
+    await expect(page.getByTestId('fit-check-title')).toHaveText('Fit Check');
     await expect(page.getByTestId('side-switcher')).toHaveCount(0);
     expect((await getTemplate(page)).sidedness).toBe('single');
 
@@ -79,7 +79,7 @@ test.describe('Sides: modes', () => {
     // Linked, not copied: there is still only one design
     expect((await getTemplate(page)).sides.back).toBeNull();
     await page.keyboard.press('Control+z');
-    await expect(canvasSide(page)).toHaveText('Front');
+    await expect(canvasSide(page)).toHaveCount(0); // one-sided: no side named
     expect((await getTemplate(page)).sidedness).toBe('single');
   });
 
@@ -96,7 +96,7 @@ test.describe('Sides: modes', () => {
     for (const el of back.elements) expect(frontIds.has(el.id)).toBe(false);
     // One undo step removes the mode change and the new back together
     await page.keyboard.press('Control+z');
-    await expect(canvasSide(page)).toHaveText('Front');
+    await expect(canvasSide(page)).toHaveCount(0); // one-sided: no side named
     expect(await getTemplate(page)).toMatchObject({ sidedness: 'single', sides: { back: null } });
   });
 
@@ -139,13 +139,12 @@ test.describe('Sides: modes', () => {
       const saved = design(await getTemplate(page), 'back');
 
       await setSides(page, away);
-      await expect(page.getByTestId('saved-back-note')).toHaveText('Your separate back design is saved and will return when you choose different sides.');
-      await expect(canvasSide(page)).toHaveText(away === 'same' ? 'Front & Back' : 'Front');
+      if (away === 'same') await expect(canvasSide(page)).toHaveText('Front & Back');
+      else await expect(canvasSide(page)).toHaveCount(0); // one-sided: no side named
       expect(await canvasTexts(page)).not.toContain('Back Priya Raman');
       expect((await getTemplate(page)).sides.back).toEqual(saved); // kept, untouched
 
       await setSides(page, 'different');
-      await expect(page.getByTestId('saved-back-note')).toHaveCount(0);
       await expect(canvasSide(page)).toHaveText('Back');
       expect(design(await getTemplate(page), 'back')).toEqual(saved);
       await expect(canvasCard(page)).toHaveCSS('background-color', 'rgb(255, 238, 170)');
@@ -156,8 +155,7 @@ test.describe('Sides: modes', () => {
     await loadSample(page);
     await setSides(page, 'different');
     await field(page, 'Background Colour').fill('#112233');
-    await page.getByTestId('background-scope').waitFor();
-    await expect(page.getByTestId('background-scope')).toHaveText('Background of the Back design.');
+    await expect(page.getByTestId('background-heading')).toHaveText('Background — Back');
     await selectLayer(page, 'Name');
     await page.getByRole('button', { name: 'Lock Name', exact: true }).click();
     await layer(page, 'Name').getByRole('button', { name: 'Move Name down' }).click();
@@ -177,8 +175,12 @@ test.describe('Sides: modes', () => {
     expect(t.sides.front.bg).toBe('#ffffff');
     expect(t.sides.back!.bg).toBe('#112233');
 
+    await expect(page.getByTestId('background-heading')).toHaveText('Background — Front');
     await editSide(page, 'back');
     await expect(canvasCard(page)).toHaveCSS('background-color', 'rgb(17, 34, 51)');
+    // Only "different" names the side: one shared design needs no label
+    await setSides(page, 'same');
+    await expect(page.getByTestId('background-heading')).toHaveText('Background');
     await expect(page.getByTestId('topbar-info')).toHaveText('90 × 140 mm');
   });
 
@@ -264,7 +266,7 @@ test.describe('Sides: undo and redo', () => {
     // Undoing past the mode change lands on a one-sided front
     await page.keyboard.press('Control+z');
     await page.keyboard.press('Control+z');
-    await expect(canvasSide(page)).toHaveText('Front');
+    await expect(canvasSide(page)).toHaveCount(0); // one-sided: no side named
     expect((await getTemplate(page)).sidedness).toBe('single');
     await page.keyboard.press('Control+Shift+z');
     await expect(canvasSide(page)).toHaveText('Front');

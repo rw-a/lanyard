@@ -539,13 +539,15 @@ export default function Designer() {
                 </div>
               </div>
               <div ref={canvasCaption} class="canvas-caption muted small">
-                <strong class="canvas-side" data-testid="canvas-side">{editingLabel(template, activeSide())}</strong>
-                <span class="caption-desktop">
+                {/* Name the side only when there is more than one face. */}
+                <Show when={template.sidedness !== 'single'}>
+                  <strong class="canvas-side" data-testid="canvas-side">{editingLabel(template, activeSide())}</strong>
                   {' · '}
+                </Show>
+                <span class="caption-desktop">
                   {cardW()} × {cardH()} mm · drag to move, drag handles to resize (Shift = keep ratio) · arrows nudge 1 mm · Delete removes · double-click text to edit
                 </span>
                 <span class="caption-mobile">
-                  {' · '}
                   {cardW()} × {cardH()} mm · drag a box to move it · drag its handles to resize
                 </span>
               </div>

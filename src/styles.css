@@ -178,11 +178,15 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 .grid3 {
   grid-template-columns: 1fr 1fr 1fr;
 }
+/* Landscape sits a little closer to the paper size it modifies, with more room before the spacing fields. */
+.field:has(+ .paper-landscape) { margin-bottom: 8px; }
+.paper-landscape { margin-bottom: 14px; }
 .grid3.paper-spacing-controls {
   row-gap: 6px;
   margin-bottom: 12px;
 }
 .paper-spacing-controls .field { margin-bottom: 0; }
+.paper-spacing-controls p { margin: 0; } /* the global paragraph margin would add space below the hint */
 .grid4 {
   grid-template-columns: repeat(4, 1fr);
 }
@@ -199,6 +203,18 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   flex: 0 0 auto;
   margin-bottom: 12px;
 }
+/* A sub-group of Card Settings: a divider and heading above, quieter labels below. */
+.card-background {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.card-background-heading {
+  margin: 0 0 8px;
+}
+.card-background .field-label {
+  color: var(--muted);
+  font-weight: 400;
+}
 .card-background-controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
@@ -208,7 +224,7 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 .card-background-controls .field {
   display: grid;
   grid-template-rows: subgrid;
-  grid-row: 1 / span 3;
+  grid-row: 1 / span 2;
   align-items: start;
 }
 .card-background-controls .field:first-child {
@@ -219,7 +235,7 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 }
 .card-background-separator {
   grid-column: 2;
-  grid-row: 1 / span 3;
+  grid-row: 1 / span 2;
   align-self: stretch;
   margin-bottom: 12px;
   background: var(--border);
@@ -233,6 +249,12 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 }
 .side .section-body {
   padding-bottom: 8px;
+}
+/* The body's own padding is the only space below the last control of an open section. */
+.side .section-body > :last-child,
+.side .section-body > .card-background:last-child .field,
+.side .section-body > .card-background:last-child .card-background-separator {
+  margin-bottom: 0;
 }
 .section-head {
   display: flex;
@@ -401,11 +423,14 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   background: var(--panel);
   flex-wrap: wrap;
 }
-.side-note {
-  margin: 0;
-}
 .back-actions {
   margin-top: -2px;
+}
+.sheet-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
 }
 .print-instructions p {
   margin: 6px 0 0;
@@ -589,15 +614,22 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   grid-column: 1 / -1;
 }
 .add-grid .add-icon {
-  position: relative;
-  min-height: 44px;
-  padding: 6px;
+  min-height: 40px;
+  /* Extra right padding nudges the group 4px left: the heavier element icon then sits near the centre. */
+  padding: 4px 12px 4px 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+/* The small plus and the element icon sit together as one group. */
+.add-grid .add-icon > svg {
+  width: 20px;
+  height: 20px;
 }
 .add-grid .add-icon > svg:first-child {
-  position: absolute;
-  left: calc(50% - 26px);
-  top: 50%;
-  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
 }
 .layers {
   list-style: none;
@@ -1097,6 +1129,27 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   }
   .toolbar > .row:first-child {
     flex: 1 1 100%;
+  }
+  /* Print: sheet navigation stays on the same line as "Back to design", on the right. */
+  .print-center .toolbar {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+  }
+  .print-center .toolbar > .row:first-child {
+    flex: 0 0 auto;
+  }
+  .print-center .toolbar > .row:first-child .btn {
+    padding-inline: 10px;
+  }
+  .print-center .toolbar > .row:last-child {
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .sheet-nav {
+    gap: 4px;
+  }
+  .sheet-face-suffix {
+    display: none;
   }
   .toolbar .sep {
     display: none;

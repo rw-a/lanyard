@@ -85,7 +85,7 @@ export default function Previews() {
     <section class="previews">
       <header class="previews-head">
         <div class="previews-title">
-          <Heading as="h3" textStyle="md" color="fg.default" data-testid="fit-check-title">Fit Check — {sideLabel()}</Heading>
+          <Heading as="h3" textStyle="md" color="fg.default" data-testid="fit-check-title">Fit Check{template.sidedness === 'single' ? '' : ` — ${sideLabel()}`}</Heading>
         </div>
         <p class="muted small">
           <Show when={hasData()} fallback={<>Load a CSV to see your layout filled with the shortest, median and longest values of each field.</>}>

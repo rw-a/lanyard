@@ -120,3 +120,36 @@ test.describe('Design panels', () => {
     await expect(page.getByRole('separator', { name: 'Resize card previews and template editor' })).toBeHidden();
   });
 });
+
+test.describe('Sidebar sections', () => {
+  /** Space between the bottom of a section's last visible control and the bottom of the open section. */
+  async function bottomGaps(page: Page): Promise<Record<string, number>> {
+    return page.evaluate(() => {
+      const out: Record<string, number> = {};
+      for (const s of document.querySelectorAll('.side.left .section')) {
+        const body = s.querySelector('.section-body');
+        const item = s.querySelector('[data-part="item"]');
+        if (!body || !item) continue;
+        // Deepest visible content: nested controls carry their own margins, so measure leaf boxes.
+        let bottom = 0;
+        for (const el of body.querySelectorAll('*')) {
+          const r = el.getBoundingClientRect();
+          if (r.height > 0 && el.children.length === 0) bottom = Math.max(bottom, r.bottom);
+        }
+        out[s.querySelector('h3')?.textContent ?? '?'] = Math.round(item.getBoundingClientRect().bottom - bottom);
+      }
+      return out;
+    });
+  }
+
+  test('open sections end with the same small gap below their last control', async ({ page }) => {
+    await loadSample(page);
+    const design = await bottomGaps(page);
+    expect(design['Card Settings']).toBeLessThanOrEqual(12);
+    await goTo(page, 'print');
+    const print = await bottomGaps(page);
+    expect(print['Paper']).toBeLessThanOrEqual(12);
+    expect(print['What to Print']).toBeLessThanOrEqual(12);
+    expect(Math.abs(print['Paper'] - print['Cutting'])).toBeLessThanOrEqual(3);
+  });
+});

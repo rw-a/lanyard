@@ -73,7 +73,7 @@ export default function Layers(props: Props) {
   return (
     <>
       <TemplateBasics />
-      <Section title="Add" collapsible>
+      <Section title="Add Element" collapsible>
         <div class="add-grid">
           <Show when={headers().length > 0}>
             <Select

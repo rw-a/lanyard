@@ -169,7 +169,6 @@ export default function PrintPanel() {
   const noFit = () => layout().perPage === 0;
   const people = () => rowIndexes().length;
   const copies = () => Math.max(1, Math.round(template.page.copies));
-  const sheetLabel = () => `Sheet ${sheetIndex() + 1} of ${plan().physicalSheetCount}${duplex() ? ` — ${face() === 'front' ? 'Front' : 'Back'}` : ''}`;
   const busy = () => status()?.state === 'preparing' || status()?.state === 'printing';
   const failure = () => {
     const s = status();
@@ -203,7 +202,9 @@ export default function PrintPanel() {
               </Field>
             </div>
           </Show>
-          <Toggle checked={template.page.landscape} label="Landscape" onChange={(v) => updateTemplate((t) => (t.page.landscape = v))} />
+          <div class="paper-landscape">
+            <Toggle checked={template.page.landscape} label="Landscape" onChange={(v) => updateTemplate((t) => (t.page.landscape = v))} />
+          </div>
           <div class="grid3 paper-spacing-controls">
             <Field label="Margin">
               <NumberField value={template.page.margin} min={0} max={50} unit="mm" aria-describedby="paper-margin-hint" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.page.margin = v), false)} />
@@ -367,22 +368,28 @@ export default function PrintPanel() {
           </div>
           <Show when={plan().pages.length > 0}>
             <div class="row gap">
-              <IconButton variant="outline" size="xs" class="btn icon" aria-label="Previous sheet" disabled={sheetIndex() === 0} onClick={() => setSheetIndex((i) => i - 1)}>
-                <ChevronLeft aria-hidden="true" />
-              </IconButton>
-              <span class="small" data-testid="sheet-label">
-                {sheetLabel()}
+              <span class="sheet-nav">
+                <IconButton variant="outline" size="xs" class="btn icon" aria-label="Previous sheet" disabled={sheetIndex() === 0} onClick={() => setSheetIndex((i) => i - 1)}>
+                  <ChevronLeft aria-hidden="true" />
+                </IconButton>
+                <span class="small" data-testid="sheet-label">
+                  Sheet {sheetIndex() + 1} of {plan().physicalSheetCount}
+                  {/* The Front/Back toggle beside it already says which face; small screens drop the repeat. */}
+                  <Show when={duplex()}>
+                    <span class="sheet-face-suffix"> — {face() === 'front' ? 'Front' : 'Back'}</span>
+                  </Show>
+                </span>
+                <IconButton
+                  variant="outline"
+                  size="xs"
+                  class="btn icon"
+                  aria-label="Next sheet"
+                  disabled={sheetIndex() >= plan().physicalSheetCount - 1}
+                  onClick={() => setSheetIndex((i) => i + 1)}
+                >
+                  <ChevronRight aria-hidden="true" />
+                </IconButton>
               </span>
-              <IconButton
-                variant="outline"
-                size="xs"
-                class="btn icon"
-                aria-label="Next sheet"
-                disabled={sheetIndex() >= plan().physicalSheetCount - 1}
-                onClick={() => setSheetIndex((i) => i + 1)}
-              >
-                <ChevronRight aria-hidden="true" />
-              </IconButton>
               <Show when={duplex()}>
                 <SegmentGroup.Root size="xs" value={face()} onValueChange={(d) => d.value && setFace(d.value as 'front' | 'back')} aria-label="Side of the sheet">
                   <SegmentGroup.Indicator />

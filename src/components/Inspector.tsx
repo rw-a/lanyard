@@ -135,7 +135,6 @@ function CardInspector() {
             </For>
           </ul>
         </Show>
-        <p class="muted small">The same picture used in several places is stored once.</p>
       </Section>
 
       <Section title="Tips" collapsible>

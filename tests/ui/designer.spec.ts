@@ -59,7 +59,7 @@ test.describe('Designer – canvas', () => {
     await page.locator('.canvas-area').click({ position: { x: 5, y: 5 } });
     await expect(page.getByTestId('selection')).toBeHidden();
     await expect(page.locator('.side.left')).toContainText('Card Settings');
-    await expect(page.locator('.side.left')).toContainText('Background Colour');
+    await expect(page.getByTestId('background-heading')).toHaveText('Background');
     await expect(page.locator('.side.right')).toContainText('Template Files');
 
     // clicking empty card space (not an element) also deselects
@@ -481,8 +481,18 @@ test.describe('Designer – inspector', () => {
     await expect(settings.getByRole('heading', { name: 'Card Background' })).toHaveCount(0);
     await expect(settings.locator('[data-field="Name"]')).toHaveCount(0);
     await expect(settings.locator('[data-field="Background Image"]')).toBeVisible();
+    // Grouped under a "Background" subheading with short labels; the accessible names stay specific
+    await expect(settings.getByTestId('background-heading')).toHaveText('Background');
+    await expect(settings.locator('[data-field="Background Colour"] .field-label')).toHaveText('Colour');
+    await expect(settings.locator('[data-field="Background Image"] .field-label')).toHaveText('Image');
+    await expect(settings.getByLabel('Background Colour')).toHaveCount(1);
+    // The heading outranks the labels under it
+    const headingWeight = await settings.getByTestId('background-heading').evaluate((e) => +getComputedStyle(e).fontWeight);
+    const labelWeight = await settings.locator('[data-field="Background Colour"] .field-label').evaluate((e) => +getComputedStyle(e).fontWeight);
+    expect(headingWeight).toBeGreaterThan(labelWeight);
+    expect((await settings.getByTestId('background-heading').boundingBox())!.y).toBeLessThan((await settings.locator('[data-field="Background Colour"]').boundingBox())!.y);
     await expect(page.locator('.side.right').getByRole('heading', { name: 'Card Background' })).toHaveCount(0);
-    const radiusBox = (await settings.locator('[data-field="Corner radius"]').boundingBox())!;
+    const radiusBox = (await settings.locator('[data-field="Corner Radius"]').boundingBox())!;
     const backgroundFieldBox = (await settings.locator('[data-field="Background Colour"]').boundingBox())!;
     expect(radiusBox.y + radiusBox.height).toBeLessThan(backgroundFieldBox.y);
     const colourBox = (await settings.locator('[data-field="Background Colour"] input[type="color"]').boundingBox())!;

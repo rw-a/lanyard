@@ -1,6 +1,6 @@
 import { Show, createEffect, createMemo, createSignal, on } from 'solid-js';
 import { CARD_PRESETS } from '../lib/template';
-import { SIDEDNESS_OPTIONS, editingLabel, sideHasContent } from '../lib/sides';
+import { SIDEDNESS_OPTIONS, SIDE_LABEL, sideHasContent } from '../lib/sides';
 import {
   activeDesign,
   activeSide,
@@ -16,7 +16,7 @@ import {
 } from '../lib/store';
 import { readImageFile } from '../lib/images';
 import { ArrowLeftRight } from 'lucide-solid';
-import { ColorField, Field, NumberField, Section, Select, IconButton, Button } from './ui';
+import { ColorField, Field, NumberField, Section, Select, IconButton, Button, Heading } from './ui';
 
 export default function TemplateBasics() {
   let bgInput!: HTMLInputElement;
@@ -29,7 +29,6 @@ export default function TemplateBasics() {
   // A pending "Really…?" belongs to the back it was asked about.
   createEffect(on([activeSide, () => template.sidedness], () => setConfirm(null), { defer: true }));
   const editingBack = () => template.sidedness === 'different' && activeSide() === 'back';
-  const savedBackInactive = () => template.sidedness !== 'different' && !!template.sides.back;
 
   function runBackAction(action: 'copy' | 'clear') {
     if (confirm() !== action && sideHasContent(template.sides.back)) {
@@ -53,11 +52,6 @@ export default function TemplateBasics() {
           }}
         />
       </Field>
-      <Show when={savedBackInactive()}>
-        <p class="muted small side-note" data-testid="saved-back-note">
-          Your separate back design is saved and will return when you choose different sides.
-        </p>
-      </Show>
       <Show when={editingBack()}>
         <div class="row gap wrap back-actions" data-testid="back-actions">
           <Show
@@ -131,55 +125,52 @@ export default function TemplateBasics() {
           <ArrowLeftRight size={18} aria-hidden="true" />
         </IconButton>
       </div>
-      <Field label="Corner radius">
+      <Field label="Corner Radius">
         <NumberField value={template.card.borderRadius} min={0} max={30} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.borderRadius = v), false)} />
       </Field>
-      <Show when={template.sidedness !== 'single'}>
-        <p class="muted small side-note">Size and corners are shared by both sides.</p>
-      </Show>
-
-      <div class="card-background-controls" data-side={activeSide()}>
-        <Field label="Background Colour">
-          <ColorField value={activeDesign().bg} onCommit={commit} onInput={(v) => updateSide(activeSide(), (d) => (d.bg = v), false)} />
-        </Field>
-        <span class="card-background-separator" aria-hidden="true" />
-        <Field label="Background Image" block>
-          <div class="row gap wrap">
-            <Button variant="outline" size="xs" class="btn small" onClick={() => bgInput.click()}>
-              {activeDesign().bgImage ? 'Replace…' : 'Upload…'}
-            </Button>
-            <Show when={activeDesign().bgImage}>
-              <Button variant="outline" size="xs" class="btn small" onClick={() => updateSide(activeSide(), (d) => (d.bgImage = null))}>
-                Remove
+      <div class="card-background" data-side={activeSide()}>
+        {/* Each side has its own background; name the side only when there are two to choose from. */}
+        <Heading as="h4" textStyle="sm" color="fg.default" class="card-background-heading" data-testid="background-heading">
+          Background{template.sidedness === 'different' ? ` — ${SIDE_LABEL[activeSide()]}` : ''}
+        </Heading>
+        <div class="card-background-controls">
+          <Field label="Background Colour" labelContent="Colour">
+            <ColorField value={activeDesign().bg} onCommit={commit} onInput={(v) => updateSide(activeSide(), (d) => (d.bg = v), false)} />
+          </Field>
+          <span class="card-background-separator" aria-hidden="true" />
+          <Field label="Background Image" labelContent="Image" block>
+            <div class="row gap wrap">
+              <Button variant="outline" size="xs" class="btn small" onClick={() => bgInput.click()}>
+                {activeDesign().bgImage ? 'Replace…' : 'Upload…'}
               </Button>
-            </Show>
-          </div>
-          <input
-            ref={bgInput}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={async (e) => {
-              const input = e.currentTarget; // null after the first await
-              const f = input.files?.[0];
-              input.value = '';
-              if (!f) return;
-              // Remember which side this upload is for: the user may switch sides before it finishes.
-              const side = activeSide();
-              const stillWanted = beginAsyncEdit(side, 'bgImage');
-              const dataUrl = await readImageFile(f, 2400);
-              if (!stillWanted()) return;
-              const ref = internImage(dataUrl);
-              updateSide(side, (d) => (d.bgImage = ref));
-            }}
-          />
-        </Field>
+              <Show when={activeDesign().bgImage}>
+                <Button variant="outline" size="xs" class="btn small" onClick={() => updateSide(activeSide(), (d) => (d.bgImage = null))}>
+                  Remove
+                </Button>
+              </Show>
+            </div>
+            <input
+              ref={bgInput}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={async (e) => {
+                const input = e.currentTarget; // null after the first await
+                const f = input.files?.[0];
+                input.value = '';
+                if (!f) return;
+                // Remember which side this upload is for: the user may switch sides before it finishes.
+                const side = activeSide();
+                const stillWanted = beginAsyncEdit(side, 'bgImage');
+                const dataUrl = await readImageFile(f, 2400);
+                if (!stillWanted()) return;
+                const ref = internImage(dataUrl);
+                updateSide(side, (d) => (d.bgImage = ref));
+              }}
+            />
+          </Field>
+        </div>
       </div>
-      <Show when={template.sidedness !== 'single'}>
-        <p class="muted small side-note" data-testid="background-scope">
-          Background of the {editingLabel(template, activeSide())} design.
-        </p>
-      </Show>
     </Section>
   );
 }
