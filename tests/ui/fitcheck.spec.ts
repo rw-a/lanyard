@@ -16,6 +16,8 @@ import {
   selectLayer,
   setField,
   waitForElement,
+  selectOption,
+  setChecked,
 } from './helpers';
 
 test.describe('Fit check – shortest / median / longest previews', () => {
@@ -50,7 +52,7 @@ test.describe('Fit check – shortest / median / longest previews', () => {
 
   test('the "which values" table lists shortest/median/longest per field', async ({ page }) => {
     await loadSample(page);
-    await page.locator('.preview-details summary').click();
+    await page.getByRole('button', { name: 'Which values are being used?' }).click();
     const row = page.locator('.preview-details tr', { hasText: 'Name' }).first();
     await expect(row).toContainText('Kai');
     await expect(row).toContainText('Priya Raman');
@@ -95,7 +97,7 @@ test.describe('Fit check – shortest / median / longest previews', () => {
     const hintBox = (await hint.boundingBox())!;
     expect(hintBox.height).toBeLessThanOrEqual(20);
     expect(Math.abs(hintBox.y + hintBox.height / 2 - (box.y + box.height / 2))).toBeLessThan(4);
-    await page.getByTestId('preview-source').locator('select').selectOption('row:0');
+    await selectOption(page, page.getByTestId('preview-source').locator('select'), 'row:0');
     await expect(hint).not.toContainText('canvas');
     await sw.click();
     await expect(input).not.toBeChecked();
@@ -103,22 +105,22 @@ test.describe('Fit check – shortest / median / longest previews', () => {
 
     // Colours and keyboard
     await page.mouse.move(5, 5); // read colours without the hover tint
-    await expect(sw.locator('.switch-track')).toHaveCSS('background-color', 'rgb(209, 213, 219)');
+    const offColour = await sw.locator('.switch-track').evaluate((el) => getComputedStyle(el).backgroundColor);
     await input.focus();
     await page.keyboard.press('Space');
     await expect(input).toBeChecked();
-    await expect(sw.locator('.switch-track')).toHaveCSS('background-color', 'rgb(31, 111, 235)');
+    await expect(sw.locator('.switch-track')).not.toHaveCSS('background-color', offColour);
   });
 
   test('"Ignore empty cells" also changes the canvas when it previews with shortest values', async ({ page }) => {
     await openApp(page);
     await pasteCsv(page, 'Name,Accommodation,Group\nAda,,Red\nBob,Tent 4,Blue\nCy,Lodge 12,Green\n');
     await page.getByTestId('tab-design').click();
-    await page.getByTestId('preview-source').locator('select').selectOption('shortest');
+    await selectOption(page, page.getByTestId('preview-source').locator('select'), 'shortest');
     const id = await elementId(page, 'Accommodation');
     const canvasAccom = canvasCard(page).locator(`.el-text[data-id="${id}"]`);
     await expect(canvasAccom).toHaveText('Tent 4');
-    await page.getByRole('switch', { name: 'Ignore empty cells' }).uncheck();
+    await setChecked(page.getByRole('switch', { name: 'Ignore empty cells' }), false);
     await expect(canvasAccom).toHaveText('');
   });
 
@@ -127,7 +129,7 @@ test.describe('Fit check – shortest / median / longest previews', () => {
     await pasteCsv(page, 'Name,Accommodation,Group\nAda,,Red\nBob,Tent 4,Blue\nCy,Lodge 12,Green\n');
     await page.getByTestId('tab-design').click();
     expect(await previewText(page, 'shortest', 'Accommodation')).toBe('Tent 4');
-    await page.locator('.previews').getByLabel('Ignore empty cells').uncheck();
+    await setChecked(page.locator('.previews').getByLabel('Ignore empty cells'), false);
     await expect.poll(() => previewText(page, 'shortest', 'Accommodation')).toBe('');
   });
 });
@@ -152,14 +154,14 @@ test.describe('Fit check – overflow detection', () => {
     await selectLayer(page, 'Name');
     await setField(page, 'H', 8); // two lines at the 12pt minimum no longer fit
     await expect(previewStatus(page, 'longest')).toHaveText(/Overflows: Name/);
-    await setField(page, 'Min size', 5); // one line at ~9pt does
+    await setField(page, 'Min Shrinked Size', 5); // one line at ~9pt does
     await expect(previewStatus(page, 'longest')).toHaveText(/Everything fits/);
   });
 
   test('turning shrink-to-fit off makes long values overflow', async ({ page }) => {
     await loadSample(page);
     await selectLayer(page, 'Name');
-    await page.getByLabel('Shrink to fit').uncheck();
+    await setChecked(page.getByLabel('Shrink to fit'), false);
     await expect(previewStatus(page, 'longest')).toHaveText(/Overflows: Name/);
     await expect(previewStatus(page, 'shortest')).toHaveText(/Everything fits/);
     expect(await fontSizeOf(preview(page, 'longest'), 'Name')).toBe(30);
@@ -168,8 +170,8 @@ test.describe('Fit check – overflow detection', () => {
   test('turning wrapping off makes a long single line overflow', async ({ page }) => {
     await loadSample(page);
     await selectLayer(page, 'Accommodation');
-    await page.getByLabel('Wrap lines').uncheck();
-    await setField(page, 'Min size', 18); // "Lakeside Lodge – Ground Floor" at 18pt bold is wider than 86 mm
+    await setChecked(page.getByLabel('Wrap lines'), false);
+    await setField(page, 'Min Shrinked Size', 18); // "Lakeside Lodge – Ground Floor" at 18pt bold is wider than 86 mm
     await expect(previewStatus(page, 'longest')).toHaveText(/Overflows: Accommodation/);
     await expect(previewStatus(page, 'shortest')).toHaveText(/Everything fits/);
   });

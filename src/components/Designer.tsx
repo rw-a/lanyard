@@ -1,4 +1,5 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { GripHorizontal, Minus, Plus, Redo2, Undo2 } from 'lucide-solid';
 import { fitProblem, type FitStatus, type PreviewSource, type TemplateElement } from '../lib/types';
 import { PX_PER_MM, clamp, describeFit, outsideCard, round } from '../lib/template';
 import {
@@ -22,7 +23,7 @@ import Card from './Card';
 import Inspector from './Inspector';
 import Layers from './Layers';
 import Previews from './Previews';
-import { Select } from './ui';
+import { Select, IconButton, Button, Toggle, Splitter } from './ui';
 
 type HandleDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 const HANDLES: HandleDir[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
@@ -53,31 +54,29 @@ export default function Designer() {
   /** Fit status per text element for the card currently on the canvas. */
   const [fitMap, setFitMap] = createSignal<Map<string, FitStatus>>(new Map());
   const [canvasSize, setCanvasSize] = createSignal({ width: 0, height: 0 });
-  const [previewHeight, setPreviewHeight] = createSignal(300);
-  let center!: HTMLElement;
-  let previewsDivider!: HTMLDivElement;
-  let previewDrag: { pointerId: number; startY: number; startHeight: number } | null = null;
   let canvasArea!: HTMLDivElement;
+  let canvasCaption!: HTMLDivElement;
   let drag: DragState | null = null;
   let pan: PanState | null = null;
 
   const cardW = () => template.card.width;
   const cardH = () => template.card.height;
   const canPan = () =>
-    cardW() * PX_PER_MM * zoom() > canvasSize().width - 24 || cardH() * PX_PER_MM * zoom() > canvasSize().height - 56;
+    cardW() * PX_PER_MM * zoom() > canvasSize().width || cardH() * PX_PER_MM * zoom() > canvasSize().height;
 
   function fitZoom() {
     if (!canvasArea) return;
-    const pad = 48;
-    const availW = canvasArea.clientWidth - pad;
-    const availH = Math.max(320, canvasArea.clientHeight - pad);
+    const areaStyle = getComputedStyle(canvasArea);
+    const captionSpace = canvasCaption ? canvasCaption.offsetHeight + parseFloat(getComputedStyle(canvasCaption).marginTop) : 0;
+    const availW = canvasArea.clientWidth - parseFloat(areaStyle.paddingLeft) - parseFloat(areaStyle.paddingRight);
+    const availH = Math.max(1, canvasArea.clientHeight - parseFloat(areaStyle.paddingTop) - parseFloat(areaStyle.paddingBottom) - captionSpace);
+    setCanvasSize({ width: availW, height: availH });
     const z = Math.min(availW / (cardW() * PX_PER_MM), availH / (cardH() * PX_PER_MM));
     setZoom(clamp(Math.floor(z * 20) / 20, 0.25, 4));
   }
 
   onMount(() => {
     const ro = new ResizeObserver(() => {
-      setCanvasSize({ width: canvasArea.clientWidth, height: canvasArea.clientHeight });
       fitZoom();
     });
     ro.observe(canvasArea);
@@ -90,7 +89,6 @@ export default function Designer() {
       window.removeEventListener('pointerup', endPan);
       window.removeEventListener('pointercancel', endPan);
       document.body.classList.remove('dragging');
-      document.body.classList.remove('resizing-preview');
     });
   });
 
@@ -256,7 +254,7 @@ export default function Designer() {
       redo();
       return;
     }
-    if (isTyping(e)) return;
+    if (isTyping(e) || (e.target as HTMLElement)?.closest('[data-scope="select"][data-part="trigger"], [data-scope="select"][data-part="content"], [data-scope="segment-group"][data-part="item"], [data-scope="splitter"][data-part="resize-trigger"], [data-scope="accordion"][data-part="item-trigger"]')) return;
     const el = selectedElement();
     if (!el) return;
     if (e.key === 'Escape') {
@@ -361,199 +359,158 @@ export default function Designer() {
 
   const handleSizePx = () => (window.matchMedia('(pointer: coarse)').matches ? 28 : 9) / zoom();
 
-  function previewMaxHeight() {
-    const toolbar = center?.querySelector('.toolbar') as HTMLElement | null;
-    return Math.max(100, (center?.clientHeight ?? 0) - (toolbar?.offsetHeight ?? 0) - 188);
-  }
-
-  function resizePreviews(height: number) {
-    setPreviewHeight(clamp(height, 100, previewMaxHeight()));
-  }
-
-  function finishPreviewResize(e: PointerEvent) {
-    if (previewDrag?.pointerId !== e.pointerId) return;
-    previewDrag = null;
-    previewsDivider.releasePointerCapture(e.pointerId);
-    document.body.classList.remove('resizing-preview');
-  }
-
   return (
     <div class="design-layout">
       <aside class="side left">
         <Layers fitMap={fitMap()} onDuplicate={duplicateSelected} onRemove={removeSelected} />
       </aside>
 
-      <main class="center" ref={center}>
+      <main class="center">
         <div class="toolbar">
           <div class="row gap">
-            <button class="btn icon" title="Undo (Ctrl+Z)" disabled={!canUndo()} onClick={undo}>
-              ↶
-            </button>
-            <button class="btn icon" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo()} onClick={redo}>
-              ↷
-            </button>
+            <IconButton variant="outline" size="xs" class="btn icon" title="Undo (Ctrl+Z)" disabled={!canUndo()} onClick={undo}>
+              <Undo2 aria-hidden="true" />
+            </IconButton>
+            <IconButton variant="outline" size="xs" class="btn icon" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo()} onClick={redo}>
+              <Redo2 aria-hidden="true" />
+            </IconButton>
             <span class="sep" />
             <label class="row gap-s small">
               <span class="muted">Preview with</span>
               <span data-testid="preview-source">
-                <Select value={sourceValue()} options={sourceOptions()} onChange={setSource} class="compact" />
+                <Select value={sourceValue()} options={sourceOptions()} onChange={setSource} label="Preview with" class="compact" />
               </span>
             </label>
           </div>
           <div class="row gap">
-            <label class="toggle small" title="Snap positions to whole millimetres (hold Alt to override)">
-              <input type="checkbox" checked={snap()} onChange={(e) => setSnap(e.currentTarget.checked)} />
-              <span>Snap</span>
-            </label>
-            <label class="toggle small">
-              <input type="checkbox" checked={grid()} onChange={(e) => setGrid(e.currentTarget.checked)} />
-              <span>Grid</span>
-            </label>
-            <label class="toggle small" title="Drag the canvas to move the view">
-              <input type="checkbox" checked={panMode()} onChange={(e) => setPanMode(e.currentTarget.checked)} />
-              <span>Move view</span>
-            </label>
+            <Toggle checked={snap()} onChange={setSnap} label="Snap" title="Snap positions to whole millimetres (hold Alt to override)" />
+            <Toggle checked={grid()} onChange={setGrid} label="Grid" />
+            <Toggle checked={panMode()} onChange={setPanMode} label="Drag to Pan" title="Drag the canvas to pan" />
             <span class="sep" />
-            <button class="btn icon" title="Zoom out" onClick={() => setZoom((z) => clamp(round(z - 0.1, 0.05), 0.25, 4))}>
-              −
-            </button>
-            <button class="btn tiny" title="Fit to view" onClick={fitZoom}>
+            <IconButton variant="outline" size="xs" class="btn icon" title="Zoom out" onClick={() => setZoom((z) => clamp(round(z - 0.1, 0.05), 0.25, 4))}>
+              <Minus aria-hidden="true" />
+            </IconButton>
+            <Button variant="outline" size="2xs" class="btn tiny" title="Fit to view" onClick={fitZoom}>
               {Math.round(zoom() * 100)}%
-            </button>
-            <button class="btn icon" title="Zoom in" onClick={() => setZoom((z) => clamp(round(z + 0.1, 0.05), 0.25, 4))}>
-              +
-            </button>
+            </Button>
+            <IconButton variant="outline" size="xs" class="btn icon" title="Zoom in" onClick={() => setZoom((z) => clamp(round(z + 0.1, 0.05), 0.25, 4))}>
+              <Plus aria-hidden="true" />
+            </IconButton>
           </div>
         </div>
 
-        <div
-          ref={canvasArea}
-          class="canvas-area"
-          classList={{ pannable: canPan(), 'pan-mode': panMode() }}
-          onPointerDown={onCanvasPointerDown}
-          onWheel={(e) => {
-            if (!e.ctrlKey && !e.metaKey) return;
-            e.preventDefault();
-            setZoom((z) => clamp(round(z * (e.deltaY < 0 ? 1.1 : 0.9), 0.01), 0.25, 4));
-          }}
+        <Splitter.Root
+          class="editor-split"
+          orientation="vertical"
+          defaultSize={['1fr', '300px']}
+          panels={[{ id: 'editor', minSize: '180px' }, { id: 'previews', minSize: '100px', resizeBehavior: 'preserve-pixel-size' }]}
+          keyboardResizeBy={20}
+          gap="0"
         >
-          <div
-            class="canvas-stage"
-            data-testid="canvas-stage"
-            style={{
-              width: `${cardW() * PX_PER_MM * zoom()}px`,
-              height: `${cardH() * PX_PER_MM * zoom()}px`,
-            }}
-          >
+          <Splitter.Panel id="editor" class="editor-panel" p="0" borderWidth="0" borderRadius="0" flexDirection="column" minHeight="0" overflow="hidden">
             <div
-              class="canvas-scaler"
-              style={{ transform: `scale(${zoom()})`, 'transform-origin': '0 0' }}
-              onPointerDown={(e) => {
-                // A press on the card background (not on an element) clears the selection.
-                if (!panMode() && (e.target as HTMLElement).classList.contains('card')) setSelectedId(null);
+              ref={canvasArea}
+              class="canvas-area"
+              classList={{ pannable: canPan(), 'pan-mode': panMode() }}
+              onPointerDown={onCanvasPointerDown}
+              onWheel={(e) => {
+                if (!e.ctrlKey && !e.metaKey) return;
+                e.preventDefault();
+                setZoom((z) => clamp(round(z * (e.deltaY < 0 ? 1.1 : 0.9), 0.01), 0.25, 4));
               }}
             >
-              <Card
-                template={template}
-                row={previewRow()}
-                editor
-                selectedId={selectedId()}
-                onElementPointerDown={onElementPointerDown}
-                onElementDblClick={() => {
-                  const ta = document.getElementById('content-editor') as HTMLTextAreaElement | null;
-                  ta?.focus();
-                  ta?.select();
+              <div
+                class="canvas-stage"
+                data-testid="canvas-stage"
+                style={{
+                  width: `${cardW() * PX_PER_MM * zoom()}px`,
+                  height: `${cardH() * PX_PER_MM * zoom()}px`,
                 }}
-                onFit={onFit}
-                class="editor-card"
-              />
-              <Show when={grid()}>
-                <div class="grid-overlay" style={{ width: `${cardW()}mm`, height: `${cardH()}mm` }} />
-              </Show>
-              {/* Selection box + handles live in the same scaled coordinate space as the card. */}
-              <Show when={selectedElement()}>
-                {(el) => (
-                  <div
-                    class="selection"
-                    data-testid="selection"
-                    classList={{
-                      locked: el().locked,
-                      overflow: problemIds().has(el().id),
-                      outside: !problemIds().has(el().id) && outsideCard(el(), template.card),
+              >
+                <div
+                  class="canvas-scaler"
+                  style={{ transform: `scale(${zoom()})`, 'transform-origin': '0 0' }}
+                  onPointerDown={(e) => {
+                    // A press on the card background (not on an element) clears the selection.
+                    if (!panMode() && (e.target as HTMLElement).classList.contains('card')) setSelectedId(null);
+                  }}
+                >
+                  <Card
+                    template={template}
+                    row={previewRow()}
+                    editor
+                    selectedId={selectedId()}
+                    onElementPointerDown={onElementPointerDown}
+                    onElementDblClick={() => {
+                      const ta = document.getElementById('content-editor') as HTMLTextAreaElement | null;
+                      ta?.focus();
+                      ta?.select();
                     }}
-                    style={{
-                      left: `${el().x}mm`,
-                      top: `${el().y}mm`,
-                      width: `${el().w}mm`,
-                      height: `${el().h}mm`,
-                      'outline-width': `${1.5 / zoom()}px`,
-                      transform: el().rotation ? `rotate(${el().rotation}deg)` : undefined,
-                    }}
-                  >
-                    <Show when={!el().locked}>
-                      <For each={HANDLES}>
-                        {(dir) => (
-                          <div
-                            class={`handle ${dir}`}
-                            style={{ width: `${handleSizePx()}px`, height: `${handleSizePx()}px`, 'border-width': `${1 / zoom()}px` }}
-                            onPointerDown={(e) => onHandlePointerDown(e, dir)}
-                          />
-                        )}
-                      </For>
-                    </Show>
-                    <div class="sel-label" data-testid="selection-label" style={{ 'font-size': `${11 / zoom()}px`, top: `${-18 / zoom()}px` }}>
-                      {el().name} · {el().w.toFixed(1)} × {el().h.toFixed(1)} mm
-                      <Show when={describeFit(fitMap().get(el().id))}>{(d) => <> · {d()}!</>}</Show>
-                      <Show when={!problemIds().has(el().id) && outsideCard(el(), template.card)}> · extends past the card edge</Show>
-                    </div>
-                  </div>
-                )}
-              </Show>
+                    onFit={onFit}
+                    class="editor-card"
+                  />
+                  <Show when={grid()}>
+                    <div class="grid-overlay" style={{ width: `${cardW()}mm`, height: `${cardH()}mm` }} />
+                  </Show>
+                  {/* Selection box + handles live in the same scaled coordinate space as the card. */}
+                  <Show when={selectedElement()}>
+                    {(el) => (
+                      <div
+                        class="selection"
+                        data-testid="selection"
+                        classList={{
+                          locked: el().locked,
+                          overflow: problemIds().has(el().id),
+                          outside: !problemIds().has(el().id) && outsideCard(el(), template.card),
+                        }}
+                        style={{
+                          left: `${el().x}mm`,
+                          top: `${el().y}mm`,
+                          width: `${el().w}mm`,
+                          height: `${el().h}mm`,
+                          'outline-width': `${1.5 / zoom()}px`,
+                          transform: el().rotation ? `rotate(${el().rotation}deg)` : undefined,
+                        }}
+                      >
+                        <Show when={!el().locked}>
+                          <For each={HANDLES}>
+                            {(dir) => (
+                              <div
+                                class={`handle ${dir}`}
+                                style={{ width: `${handleSizePx()}px`, height: `${handleSizePx()}px`, 'border-width': `${1 / zoom()}px` }}
+                                onPointerDown={(e) => onHandlePointerDown(e, dir)}
+                              />
+                            )}
+                          </For>
+                        </Show>
+                        <div class="sel-label" data-testid="selection-label" style={{ 'font-size': `${11 / zoom()}px`, top: `${-18 / zoom()}px` }}>
+                          {el().name} · {el().w.toFixed(1)} × {el().h.toFixed(1)} mm
+                          <Show when={describeFit(fitMap().get(el().id))}>{(d) => <> · {d()}!</>}</Show>
+                          <Show when={!problemIds().has(el().id) && outsideCard(el(), template.card)}> · extends past the card edge</Show>
+                        </div>
+                      </div>
+                    )}
+                  </Show>
+                </div>
+              </div>
+              <div ref={canvasCaption} class="canvas-caption muted small">
+                <span class="caption-desktop">
+                  {cardW()} × {cardH()} mm · drag to move, drag handles to resize (Shift = keep ratio) · arrows nudge 1 mm · Delete removes · double-click text to edit
+                </span>
+                <span class="caption-mobile">
+                  {cardW()} × {cardH()} mm · drag a box to move it · drag its handles to resize
+                </span>
+              </div>
             </div>
-          </div>
-          <div class="canvas-caption muted small">
-            <span class="caption-desktop">
-              {cardW()} × {cardH()} mm · drag to move, drag handles to resize (Shift = keep ratio) · use Move view to pan the canvas · arrows nudge 1 mm · Delete removes · double-click text to edit
-            </span>
-            <span class="caption-mobile">
-              {cardW()} × {cardH()} mm · drag a box to move it · drag its handles to resize · use Move view to pan
-            </span>
-          </div>
-        </div>
 
-        <div
-          ref={previewsDivider}
-          class="previews-divider"
-          role="separator"
-          aria-label="Resize card previews and template editor"
-          aria-orientation="horizontal"
-          aria-valuemin={100}
-          aria-valuemax={Math.max(previewHeight(), previewMaxHeight())}
-          aria-valuenow={previewHeight()}
-          tabIndex={0}
-          onPointerDown={(e) => {
-            if (e.button !== 0) return;
-            e.preventDefault();
-            previewDrag = { pointerId: e.pointerId, startY: e.clientY, startHeight: previewsDivider.nextElementSibling?.getBoundingClientRect().height ?? previewHeight() };
-            previewsDivider.setPointerCapture(e.pointerId);
-            document.body.classList.add('resizing-preview');
-          }}
-          onPointerMove={(e) => {
-            if (previewDrag?.pointerId === e.pointerId) resizePreviews(previewDrag.startHeight + previewDrag.startY - e.clientY);
-          }}
-          onPointerUp={finishPreviewResize}
-          onPointerCancel={finishPreviewResize}
-          onKeyDown={(e) => {
-            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-              e.preventDefault();
-              resizePreviews(previewHeight() + (e.key === 'ArrowUp' ? 20 : -20));
-            } else if (e.key === 'Home' || e.key === 'End') {
-              e.preventDefault();
-              resizePreviews(e.key === 'Home' ? 100 : previewMaxHeight());
-            }
-          }}
-        />
-        <Previews height={previewHeight()} />
+          </Splitter.Panel>
+          <Splitter.ResizeTrigger id="editor:previews" class="previews-divider" aria-label="Resize card previews and template editor">
+            <GripHorizontal size={12} aria-hidden="true" />
+          </Splitter.ResizeTrigger>
+          <Splitter.Panel id="previews" class="previews-panel" p="0" borderWidth="0" borderRadius="0" minHeight="0" overflow="hidden">
+            <Previews />
+          </Splitter.Panel>
+        </Splitter.Root>
       </main>
 
       <aside class="side right">

@@ -4,7 +4,8 @@ A static web app for making lanyard badges / name cards for a camp (or any event
 Upload a CSV, design one badge template with drag-and-drop, and print every card
 onto cut-ready sheets — straight from the browser, with nothing sent to a server.
 
-Built with [SolidJS](https://www.solidjs.com/) + [Vite](https://vitejs.dev/), deployed to GitHub Pages automatically.
+Built with [SolidJS](https://www.solidjs.com/), [Park UI](https://park-ui.com/),
+[Panda CSS](https://panda-css.com/) and [Vite](https://vitejs.dev/), deployed to GitHub Pages automatically.
 
 ## What it does
 
@@ -28,7 +29,7 @@ Built with [SolidJS](https://www.solidjs.com/) + [Vite](https://vitejs.dev/), de
    or just a few rows for reprints.
 
 The template and roster are saved in your browser automatically and the template can be
-exported/imported as JSON.
+exported/imported as JSON. Exports use the filename `template.lanyard.json`.
 
 ## Where your work is saved
 
@@ -57,6 +58,23 @@ npm run preview    # serves the production build
 ```
 
 Node 22 is recommended (see `.nvmrc`).
+
+## UI components and styling
+
+The interface uses Park UI's Solid components, built on Ark UI, with the default
+neutral theme, component recipes, sizes and variants. Component source lives in
+`src/components/park/`, and the theme lives in `src/theme/`. `src/components/ui.tsx`
+composes those components into the app's labelled fields and sections.
+
+Panda generates `styled-system/` during installation, builds and type checks. The
+directory is ignored by Git; regenerate it with `npm run prepare` if needed.
+`panda.config.ts` and `postcss.config.cjs` connect the theme to Vite. The generated
+Park components use Panda 2's `createSlotRecipeContext` API.
+
+`src/styles.css` contains the app layout, responsive rules and card canvas/print
+styles. Buttons, dropdowns, checkboxes, switches, tabs, tables and disclosures use
+Park UI's default styling. The preview divider uses Park UI's accessible splitter;
+the sidebar sections use its accordion component.
 
 ## Deploy to GitHub Pages (automatic)
 
@@ -165,7 +183,9 @@ src/
     PrintPanel.tsx   sheet layout, crop marks, print portal
     Card.tsx         renders one badge from template + row
     TextBox.tsx      text element with shrink-to-fit measurement
-    ui.tsx           small form controls
+    ui.tsx           app compositions of Park UI controls
+    park/            Park UI Solid component source
+  theme/             Park UI tokens and component recipes
   lib/
     types.ts         Template / element / dataset types
     template.ts      defaults, placeholders, sheet layout maths, palette

@@ -80,8 +80,6 @@ function sanitize(raw: unknown): Template {
   // Fill in any fields added since the template was saved.
   const d = defaultTemplate();
   const merged: Template = {
-    ...d,
-    ...t,
     version: 2,
     card: { ...d.card, ...t.card },
     page: { ...d.page, ...t.page },
@@ -122,7 +120,10 @@ export async function initStore(): Promise<void> {
         const upgraded = sanitize(storedTemplate);
         setTemplateStore(reconcile(upgraded, { key: 'id' }));
         // Templates saved by older versions are written back in the current format.
-        if ((storedTemplate as { version?: number }).version !== upgraded.version) void write(KEYS.template, upgraded, 'The template');
+        const hasLegacyName = Object.prototype.hasOwnProperty.call(storedTemplate ?? {}, 'name');
+        if ((storedTemplate as { version?: number } | null)?.version !== upgraded.version || hasLegacyName) {
+          void write(KEYS.template, upgraded, 'The template');
+        }
       }
       if (isDataset(storedDataset)) setDatasetRaw(storedDataset);
       templatePristine = storedTemplate === undefined || pristine === true;

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import solid from 'vite-plugin-solid';
+import { fileURLToPath, URL } from 'node:url';
 
 // On GitHub Pages a project site is served from https://<user>.github.io/<repo>/ ,
 // so assets must be referenced relative to that sub-path. The deploy workflow
@@ -10,6 +11,12 @@ const base = process.env.VITE_BASE ?? '/';
 
 export default defineConfig({
   base,
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      'styled-system': fileURLToPath(new URL('./styled-system', import.meta.url)),
+    },
+  },
   plugins: [solid()],
   build: {
     target: 'es2020',

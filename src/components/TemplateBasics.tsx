@@ -2,8 +2,8 @@ import { Show, createMemo } from 'solid-js';
 import { CARD_PRESETS } from '../lib/template';
 import { commit, internImage, template, updateTemplate } from '../lib/store';
 import { readImageFile } from '../lib/images';
-import { IconSwap } from './icons';
-import { ColorField, Field, NumberField, Section, Select, TextField } from './ui';
+import { ArrowLeftRight } from 'lucide-solid';
+import { ColorField, Field, NumberField, Section, Select, IconButton, Button } from './ui';
 
 export default function TemplateBasics() {
   let bgInput!: HTMLInputElement;
@@ -13,12 +13,7 @@ export default function TemplateBasics() {
   });
 
   return (
-    <Section title="Card settings" collapsible>
-      <Field label="Name">
-        <TextField value={template.name} onCommit={commit} onInput={(v) => updateTemplate((t) => (t.name = v), false)} />
-      </Field>
-
-      <h4 class="card-settings-subhead">Card size</h4>
+    <Section title="Card Settings" collapsible>
       <Field label="Preset">
         <Select
           value={presetValue()}
@@ -41,7 +36,7 @@ export default function TemplateBasics() {
         <Field label="Height">
           <NumberField value={template.card.height} min={20} max={400} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.height = v), false)} />
         </Field>
-        <button
+        <IconButton variant="outline" size="xs"
           type="button"
           class="btn icon"
           aria-label="Swap orientation"
@@ -54,28 +49,27 @@ export default function TemplateBasics() {
             })
           }
         >
-          <IconSwap size={18} />
-        </button>
+          <ArrowLeftRight size={18} aria-hidden="true" />
+        </IconButton>
       </div>
       <Field label="Corner radius">
         <NumberField value={template.card.borderRadius} min={0} max={30} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.borderRadius = v), false)} />
       </Field>
 
-      <h4 class="card-settings-subhead">Card background</h4>
       <div class="card-background-controls">
-        <Field label="Colour">
+        <Field label="Background Colour">
           <ColorField value={template.card.bg} onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.bg = v), false)} />
         </Field>
-        <span class="card-background-separator">or</span>
-        <Field label="Background image" block hint="Printed behind everything, scaled to cover the card.">
+        <span class="card-background-separator" aria-hidden="true" />
+        <Field label="Background Image" block>
           <div class="row gap wrap">
-            <button class="btn small" onClick={() => bgInput.click()}>
+            <Button variant="outline" size="xs" class="btn small" onClick={() => bgInput.click()}>
               {template.card.bgImage ? 'Replace…' : 'Upload…'}
-            </button>
+            </Button>
             <Show when={template.card.bgImage}>
-              <button class="btn small" onClick={() => updateTemplate((t) => (t.card.bgImage = null))}>
+              <Button variant="outline" size="xs" class="btn small" onClick={() => updateTemplate((t) => (t.card.bgImage = null))}>
                 Remove
-              </button>
+              </Button>
             </Show>
           </div>
           <input

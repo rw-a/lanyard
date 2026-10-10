@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { field, goTo, loadSample, openApp, setField } from './helpers';
+import { goTo, loadSample, openApp, setField } from './helpers';
 
 /** Horizontal centre of the step tabs minus the centre of the window (px). */
 async function tabsOffCentre(page: Page): Promise<number> {
@@ -13,18 +13,10 @@ async function tabPositions(page: Page): Promise<number[]> {
 }
 
 test.describe('Top bar', () => {
-  test('the Data / Design / Print tabs stay centred when the template name or size changes', async ({ page }) => {
+  test('the Data / Design / Print tabs stay centred when the card size changes', async ({ page }) => {
     await loadSample(page);
     expect(Math.abs(await tabsOffCentre(page))).toBeLessThanOrEqual(1);
     const start = await tabPositions(page);
-
-    // Template name: empty, short, very long
-    for (const name of ['', 'X', 'Summer camp badges for the whole of the Lakeside site, version 7 (final, really final)']) {
-      await page.locator('.canvas-area').click({ position: { x: 5, y: 5 } }); // show the Template section
-      await field(page, 'Name').fill(name);
-      await expect(page.getByTestId('topbar-info')).toContainText(name.slice(0, 10));
-      expect(await tabPositions(page), `name "${name.slice(0, 20)}"`).toEqual(start);
-    }
 
     // Card sizes with different digit counts
     for (const [w, h] of [
@@ -40,19 +32,13 @@ test.describe('Top bar', () => {
     }
   });
 
-  test('a long template name is truncated instead of overlapping the tabs', async ({ page }) => {
+  test('card dimensions stay visible beside the tabs', async ({ page }) => {
     await loadSample(page);
-    await page.locator('.canvas-area').click({ position: { x: 5, y: 5 } });
-    const long = 'A remarkably long template name that keeps going and going far beyond any sensible width';
-    await field(page, 'Name').fill(long);
     const tabs = (await page.getByTestId('steps').boundingBox())!;
     const info = (await page.getByTestId('topbar-info').boundingBox())!;
     expect(info.x).toBeGreaterThanOrEqual(tabs.x + tabs.width); // no overlap
     expect(info.x + info.width).toBeLessThanOrEqual(page.viewportSize()!.width);
-    const name = page.locator('.template-name');
-    expect(await name.evaluate((e) => e.scrollWidth > e.clientWidth)).toBe(true); // ellipsised
-    await expect(name).toHaveAttribute('title', long); // full name on hover
-    await expect(page.getByTestId('topbar-info')).toContainText('100 × 140 mm'); // size is never squeezed out
+    await expect(page.getByTestId('topbar-info')).toHaveText('100 × 140 mm');
   });
 
   test('the tabs are centred on every tab and with or without data', async ({ page }) => {
@@ -77,29 +63,34 @@ test.describe('Top bar', () => {
 test.describe('Design panels', () => {
   test('left and right sections collapse independently and keep their controls', async ({ page }) => {
     await loadSample(page);
-    const settings = page.locator('.side.left .section').filter({ has: page.getByRole('heading', { name: 'Card settings' }) });
-    const files = page.locator('.side.right .section').filter({ has: page.getByRole('heading', { name: 'Template files' }) });
-    const settingsToggle = settings.getByRole('button', { name: 'Card settings' });
-    const filesToggle = files.getByRole('button', { name: 'Template files' });
+    const settings = page.locator('.side.left .section').filter({ has: page.getByRole('heading', { name: 'Card Settings' }) });
+    const files = page.locator('.side.right .section').filter({ has: page.getByRole('heading', { name: 'Template Files' }) });
+    const settingsToggle = settings.getByRole('button', { name: 'Card Settings' });
+    const filesToggle = files.getByRole('button', { name: 'Template Files' });
 
     await settingsToggle.click();
     await expect(settingsToggle).toHaveAttribute('aria-expanded', 'false');
-    await expect(settings.getByText('Card size')).toBeHidden();
+    await expect(settings.locator('[data-field="Preset"]')).toBeHidden();
     await expect(files.getByRole('button', { name: 'Export JSON' })).toBeVisible();
 
     await filesToggle.click();
     await expect(files.getByRole('button', { name: 'Export JSON' })).toBeHidden();
     await settingsToggle.click();
-    await expect(settings.getByText('Card size')).toBeVisible();
+    await expect(settings.locator('[data-field="Preset"]')).toBeVisible();
   });
 
   test('sidebar section titles stay on one line', async ({ page }) => {
     await loadSample(page);
     await page.setViewportSize({ width: 900, height: 800 });
-    for (const title of ['Card settings', 'Template files', 'Pictures stored']) {
+    for (const title of ['Card Settings', 'Template Files', 'Pictures Stored']) {
       const toggle = page.getByRole('button', { name: title, exact: true });
-      const height = await toggle.evaluate((element) => element.getBoundingClientRect().height);
-      expect(height, title).toBeLessThan(24);
+      const lines = await toggle.evaluate((element) => {
+        const text = [...element.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
+        const range = document.createRange();
+        range.selectNode(text!);
+        return range.getClientRects().length;
+      });
+      expect(lines, title).toBe(1);
     }
   });
 
@@ -118,7 +109,9 @@ test.describe('Design panels', () => {
     await divider.focus();
     await page.keyboard.press('ArrowDown');
     expect((await previews.boundingBox())!.height).toBeLessThan(dragged);
-    await expect(divider).toHaveAttribute('aria-valuenow', String(Math.round((await previews.boundingBox())!.height)));
+    const value = Number(await divider.getAttribute('aria-valuenow'));
+    expect(value).toBeGreaterThanOrEqual(Number(await divider.getAttribute('aria-valuemin')));
+    expect(value).toBeLessThanOrEqual(Number(await divider.getAttribute('aria-valuemax')));
   });
 
   test('the divider is hidden when panels stack', async ({ page }) => {

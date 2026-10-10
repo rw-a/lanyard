@@ -15,6 +15,7 @@ import {
   previewImage,
   ruleRow,
   selectLayer,
+  selectOption,
 } from './helpers';
 import type { ImageElement } from '../../src/lib/types';
 import { ASSET_PREFIX, imageUrl } from '../../src/lib/template';
@@ -59,7 +60,7 @@ test.describe('Images – fixed picture', () => {
     await loadSample(page);
     await addImageElement(page);
     await page.getByTestId('image-upload').setInputFiles(await makePng(page, 'a.png', '#123456'));
-    await field(page, 'Fit').selectOption('cover');
+    await selectOption(page, field(page, 'Fit'), 'cover');
     await expect(canvasImage(page)).toHaveCSS('object-fit', 'cover');
     await page.locator('.side.right [data-field="Corner radius"] input').fill('5');
     await expect(canvasCard(page).locator('.el-image')).toHaveCSS('border-radius', /18\.89/); // 5 mm
@@ -70,10 +71,10 @@ test.describe('Images – different picture per value of a field', () => {
   test('assigning pictures one value at a time', async ({ page }) => {
     await loadSample(page);
     await addImageElement(page);
-    await field(page, 'Picture source').selectOption('rule');
+    await selectOption(page, field(page, 'Picture source'), 'rule');
     // A column with a handful of distinct values is guessed; we want Group.
     await expect(field(page, 'Field')).toHaveValue(/Accommodation|Group|Role|Dietary/);
-    await field(page, 'Field').selectOption('Group');
+    await selectOption(page, field(page, 'Field'), 'Group');
     await expect(page.locator('[data-testid="image-rule-row"]')).toHaveCount(6);
     await expect(page.locator('[data-field^="Pictures"] .field-label')).toHaveText('Pictures (0 of 6 values)');
     // Nothing assigned yet → the canvas (median row, Otters) explains why it is empty
@@ -92,9 +93,9 @@ test.describe('Images – different picture per value of a field', () => {
     await expect(previewImage(page, 'longest')).toHaveCount(0);
 
     // The canvas follows the chosen preview row
-    await page.getByTestId('preview-source').locator('select').selectOption('shortest');
+    await selectOption(page, page.getByTestId('preview-source').locator('select'), 'shortest');
     await expect(canvasImage(page)).toHaveAttribute('src', bear.dataUrl);
-    await page.getByTestId('preview-source').locator('select').selectOption('row:0'); // Li Wu, Otters
+    await selectOption(page, page.getByTestId('preview-source').locator('select'), 'row:0'); // Li Wu, Otters
     await expect(canvasCard(page).getByTestId('image-placeholder')).toHaveText('No image for “Otters”');
 
     const rule = (await imageEl(page)).imageRule!;
@@ -110,8 +111,8 @@ test.describe('Images – different picture per value of a field', () => {
   test('a fallback picture covers every value without its own', async ({ page }) => {
     await loadSample(page);
     await addImageElement(page);
-    await field(page, 'Picture source').selectOption('rule');
-    await field(page, 'Field').selectOption('Group');
+    await selectOption(page, field(page, 'Picture source'), 'rule');
+    await selectOption(page, field(page, 'Field'), 'Group');
     const bear = await makePng(page, 'bear.png', '#8b5a2b');
     const generic = await makePng(page, 'generic.png', '#999999');
     await ruleRow(page, 'Bears').getByRole('button', { name: 'Upload' }).click();
@@ -132,8 +133,8 @@ test.describe('Images – different picture per value of a field', () => {
   test('uploading many files at once matches them to values by name', async ({ page }) => {
     await loadSample(page);
     await addImageElement(page);
-    await field(page, 'Picture source').selectOption('rule');
-    await field(page, 'Field').selectOption('Group');
+    await selectOption(page, field(page, 'Picture source'), 'rule');
+    await selectOption(page, field(page, 'Field'), 'Group');
 
     const files = [
       await makePng(page, 'bears.png', '#8b5a2b'),
@@ -173,17 +174,17 @@ test.describe('Images – different picture per value of a field', () => {
   test('changing the field re-keys the rule; "same picture" switches the rule off', async ({ page }) => {
     await loadSample(page);
     await addImageElement(page);
-    await field(page, 'Picture source').selectOption('rule');
-    await field(page, 'Field').selectOption('Group');
+    await selectOption(page, field(page, 'Picture source'), 'rule');
+    await selectOption(page, field(page, 'Field'), 'Group');
     await page.getByTestId('bulk-upload').setInputFiles([await makePng(page, 'bears.png', '#8b5a2b')]);
     await expect(page.locator('[data-field^="Pictures"] .field-label')).toHaveText('Pictures (1 of 6 values)');
 
-    await field(page, 'Field').selectOption('Accommodation');
+    await selectOption(page, field(page, 'Field'), 'Accommodation');
     await expect(page.locator('[data-testid="image-rule-row"]')).toHaveCount(9);
     await expect(page.locator('[data-field^="Pictures"] .field-label')).toHaveText('Pictures (0 of 9 values)');
     expect((await imageEl(page)).imageRule!.column).toBe('Accommodation');
 
-    await field(page, 'Picture source').selectOption('fixed');
+    await selectOption(page, field(page, 'Picture source'), 'fixed');
     expect((await imageEl(page)).imageRule).toBeNull();
     await expect(page.getByTestId('image-upload')).toBeAttached();
     await expect(canvasCard(page).getByTestId('image-placeholder')).toHaveText('Image');
@@ -192,8 +193,8 @@ test.describe('Images – different picture per value of a field', () => {
   test('the rule column counts as a used field on the Data tab', async ({ page }) => {
     await loadSample(page);
     await addImageElement(page);
-    await field(page, 'Picture source').selectOption('rule');
-    await field(page, 'Field').selectOption('Dietary');
+    await selectOption(page, field(page, 'Picture source'), 'rule');
+    await selectOption(page, field(page, 'Field'), 'Dietary');
     await goTo(page, 'data');
     await expect(page.locator('.chip', { hasText: 'Dietary' })).toHaveCount(1);
   });
@@ -201,8 +202,8 @@ test.describe('Images – different picture per value of a field', () => {
   test('print sheets give every person their own picture', async ({ page }) => {
     await loadSample(page);
     await addImageElement(page);
-    await field(page, 'Picture source').selectOption('rule');
-    await field(page, 'Field').selectOption('Group');
+    await selectOption(page, field(page, 'Picture source'), 'rule');
+    await selectOption(page, field(page, 'Field'), 'Group');
     const bears = await makePng(page, 'bears.png', '#8b5a2b');
     const otters = await makePng(page, 'otters.png', '#2563eb');
     await page.getByTestId('bulk-upload').setInputFiles([bears, otters]);
@@ -220,8 +221,8 @@ test.describe('Images – different picture per value of a field', () => {
   test('the rule survives a reload', async ({ page }) => {
     await loadSample(page);
     await addImageElement(page);
-    await field(page, 'Picture source').selectOption('rule');
-    await field(page, 'Field').selectOption('Group');
+    await selectOption(page, field(page, 'Picture source'), 'rule');
+    await selectOption(page, field(page, 'Field'), 'Group');
     const bears = await makePng(page, 'bears.png', '#8b5a2b');
     await page.getByTestId('bulk-upload').setInputFiles([bears]);
     await expect(ruleRow(page, 'Bears').locator('img.thumb')).toBeVisible();
@@ -239,17 +240,17 @@ test.describe('Images – URL from a field', () => {
   test('uses the cell text as the image address', async ({ page }) => {
     await loadSample(page);
     await addImageElement(page);
-    await field(page, 'Picture source').selectOption('column');
+    await selectOption(page, field(page, 'Picture source'), 'column');
     await expect(field(page, 'Field with the image URL')).toHaveValue('Name');
-    await page.getByTestId('preview-source').locator('select').selectOption('row:4'); // Priya Raman
+    await selectOption(page, page.getByTestId('preview-source').locator('select'), 'row:4'); // Priya Raman
     await expect(canvasImage(page)).toHaveAttribute('src', 'Priya Raman'); // cell text used verbatim
-    await field(page, 'Field with the image URL').selectOption('Emergency contact');
+    await selectOption(page, field(page, 'Field with the image URL'), 'Emergency contact');
     await expect(canvasImage(page)).toHaveAttribute('src', 'Ravi Raman 555-0105');
     expect((await imageEl(page)).srcColumn).toBe('Emergency contact');
 
     // Empty cells fall back to the placeholder in the editor
-    await field(page, 'Field with the image URL').selectOption('Dietary');
-    await page.getByTestId('preview-source').locator('select').selectOption('row:0'); // Li Wu has no dietary note
+    await selectOption(page, field(page, 'Field with the image URL'), 'Dietary');
+    await selectOption(page, page.getByTestId('preview-source').locator('select'), 'row:0'); // Li Wu has no dietary note
     await expect(canvasCard(page).getByTestId('image-placeholder')).toHaveText('No URL in Dietary');
   });
 });
@@ -260,8 +261,8 @@ test.describe('Images – deduplicated storage', () => {
   test('the same picture assigned to several values is stored once', async ({ page }) => {
     await loadSample(page);
     await addImageElement(page);
-    await field(page, 'Picture source').selectOption('rule');
-    await field(page, 'Field').selectOption('Group');
+    await selectOption(page, field(page, 'Picture source'), 'rule');
+    await selectOption(page, field(page, 'Field'), 'Group');
     // Two files with different names but identical content, plus one different picture
     const bears = await makePng(page, 'bears.png', '#8b5a2b');
     const otters = await makePng(page, 'otters.png', '#8b5a2b');
@@ -328,8 +329,8 @@ test.describe('Images – deduplicated storage', () => {
   test('"Remove" / "Clear all" free the pictures they drop', async ({ page }) => {
     await loadSample(page);
     await addImageElement(page);
-    await field(page, 'Picture source').selectOption('rule');
-    await field(page, 'Field').selectOption('Group');
+    await selectOption(page, field(page, 'Picture source'), 'rule');
+    await selectOption(page, field(page, 'Field'), 'Group');
     await page.getByTestId('bulk-upload').setInputFiles([await makePng(page, 'bears.png', '#8b5a2b'), await makePng(page, 'otters.png', '#2563eb')]);
     await expect.poll(() => assetCount(page)).toBe(2);
     await ruleRow(page, 'Bears').getByTitle('Remove this picture').click();
@@ -356,16 +357,18 @@ test.describe('Images – deduplicated storage', () => {
 
     // Build a version-1 template by hand: pictures inline, the same one twice
     const v1 = { ...exported, version: 1, assets: undefined, name: 'Old style' };
+    v1.card.width = 86;
     for (const el of v1.elements) if (el.kind === 'image') el.src = logo.dataUrl;
     await page.locator('input[type=file][accept*="json"]').setInputFiles({
       name: 'old.lanyard.json',
       mimeType: 'application/json',
       buffer: Buffer.from(JSON.stringify(v1)),
     });
-    await expect(page.locator('.topbar')).toContainText('Old style');
+    await expect(page.getByTestId('topbar-info')).toHaveText('86 × 140 mm');
     await expect(canvasImage(page)).toHaveCount(2);
     await expect(canvasImage(page).first()).toHaveAttribute('src', logo.dataUrl);
     const t = await getTemplate(page);
+    expect(t).not.toHaveProperty('name');
     expect(t.version).toBe(2);
     expect(Object.keys(t.assets)).toHaveLength(1);
     for (const el of t.elements) if (el.kind === 'image') expect(el.src.startsWith(ASSET_PREFIX)).toBe(true);
@@ -374,7 +377,7 @@ test.describe('Images – deduplicated storage', () => {
   test('the card background is stored as a picture too', async ({ page }) => {
     await loadSample(page);
     const bg = await makePng(page, 'bg.png', '#eeeeee', 200, 280);
-    await page.locator('[data-field="Background image"] input[type=file]').setInputFiles(bg);
+    await page.locator('[data-field="Background Image"] input[type=file]').setInputFiles(bg);
     await expect(canvasCard(page)).toHaveCSS('background-image', `url("${bg.dataUrl}")`);
     const t = await getTemplate(page);
     expect(t.card.bgImage!.startsWith(ASSET_PREFIX)).toBe(true);

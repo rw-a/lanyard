@@ -1,8 +1,9 @@
 import { For, Show, createMemo, createSignal } from 'solid-js';
+import { ArrowRight, Upload } from 'lucide-solid';
 import { SAMPLE_CSV, parseCsv, readFileAsText } from '../lib/csv';
 import { columnStats } from '../lib/stats';
-import { dataset, ignoreEmpty, setDataset, setIgnoreEmpty, setTab, template, usedColumns } from '../lib/store';
-import { Section, Switch } from './ui';
+import { dataset, ignoreEmpty, setDataset, setIgnoreEmpty, setTab, usedColumns } from '../lib/store';
+import { Section, Switch, Button, Textarea, Notice, Badge, Table, Heading } from './ui';
 
 export default function DataPanel() {
   const [warnings, setWarnings] = createSignal<string[]>([]);
@@ -66,31 +67,27 @@ export default function DataPanel() {
             }}
           />
           <div class="dropzone-icon" aria-hidden="true">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
-              <path d="M12 3v12" />
-              <path d="m7 8 5-5 5 5" />
-            </svg>
+            <Upload size={40} />
           </div>
-          <h2>Drop your CSV here</h2>
+          <Heading as="h2" textStyle="xl" color="fg.default">Drop Your CSV Here</Heading>
           <p class="muted">
             First row must be the column headers (e.g. <code>Name, Accommodation, Group</code>). Comma, semicolon and tab separated files all
             work. Nothing is uploaded anywhere — everything stays in your browser.
           </p>
           <div class="row gap">
-            <button class="btn primary" onClick={() => fileInput.click()}>
+            <Button size="md" class="btn primary" onClick={() => fileInput.click()}>
               Choose file…
-            </button>
-            <button class="btn" onClick={() => setPasteOpen((v) => !v)}>
+            </Button>
+            <Button variant="outline" size="md" class="btn" onClick={() => setPasteOpen((v) => !v)}>
               Paste text
-            </button>
-            <button class="btn" onClick={() => loadText(SAMPLE_CSV, 'sample-camp-roster.csv')}>
+            </Button>
+            <Button variant="outline" size="md" class="btn" onClick={() => loadText(SAMPLE_CSV, 'sample-camp-roster.csv')}>
               Load sample roster
-            </button>
+            </Button>
           </div>
           <Show when={pasteOpen()}>
             <div class="paste-box" onClick={(e) => e.stopPropagation()}>
-              <textarea
+              <Textarea
                 class="input"
                 rows={8}
                 placeholder={'Name,Accommodation,Group\nAda Lovelace,Cabin 3,Otters'}
@@ -98,7 +95,7 @@ export default function DataPanel() {
                 onInput={(e) => setPasteText(e.currentTarget.value)}
               />
               <div class="row gap">
-                <button
+                <Button size="md"
                   class="btn primary"
                   disabled={!pasteText().trim()}
                   onClick={() => {
@@ -107,37 +104,37 @@ export default function DataPanel() {
                   }}
                 >
                   Use this data
-                </button>
-                <button class="btn" onClick={() => setPasteOpen(false)}>
+                </Button>
+                <Button variant="outline" size="md" class="btn" onClick={() => setPasteOpen(false)}>
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           </Show>
         </div>
 
         <Show when={warnings().length > 0}>
-          <div class="notice warn">
+          <Notice warning class="notice warn">
             <strong>Heads up:</strong>
             <ul>
               <For each={warnings()}>{(w) => <li>{w}</li>}</For>
             </ul>
-          </div>
+          </Notice>
         </Show>
 
         <Show when={dataset()}>
           {(ds) => (
             <>
               <Section
-                title={`${ds().fileName} — ${ds().rows.length} ${ds().rows.length === 1 ? 'person' : 'people'}, ${ds().headers.length} columns`}
+                title={`${ds().fileName} — ${ds().rows.length} ${ds().rows.length === 1 ? 'Person' : 'People'}, ${ds().headers.length} Columns`}
                 actions={
                   <div class="row gap">
-                    <button class="btn" onClick={() => setDataset(null)}>
+                    <Button variant="outline" size="md" class="btn" onClick={() => setDataset(null)}>
                       Remove data
-                    </button>
-                    <button class="btn primary" onClick={() => setTab('design')}>
-                      Design the badge →
-                    </button>
+                    </Button>
+                    <Button size="md" class="btn primary" onClick={() => setTab('design')}>
+                      Design the badge <ArrowRight aria-hidden="true" />
+                    </Button>
                   </div>
                 }
               >
@@ -145,7 +142,7 @@ export default function DataPanel() {
                   Columns used by the current template: {' '}
                   <Show when={usedColumns().length > 0} fallback={<em>none yet</em>}>
                     <For each={usedColumns()}>
-                      {(c) => <span class="chip" classList={{ missing: !ds().headers.includes(c) }}>{c}</span>}
+                      {(c) => <Badge class={ds().headers.includes(c) ? 'chip' : 'chip missing'} colorPalette={ds().headers.includes(c) ? 'gray' : 'red'}>{c}</Badge>}
                     </For>
                   </Show>
                   <Show when={usedColumns().some((c) => !ds().headers.includes(c))}>
@@ -154,37 +151,37 @@ export default function DataPanel() {
                   </Show>
                 </p>
                 <div class="table-wrap">
-                  <table class="table">
-                    <thead>
-                      <tr>
-                        <th class="idx">#</th>
-                        <For each={ds().headers}>{(h) => <th>{h}</th>}</For>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table.Root class="table">
+                    <Table.Head>
+                      <Table.Row>
+                        <Table.Header class="idx">#</Table.Header>
+                        <For each={ds().headers}>{(h) => <Table.Header>{h}</Table.Header>}</For>
+                      </Table.Row>
+                    </Table.Head>
+                    <Table.Body>
                       <For each={previewRows()}>
                         {(r, i) => (
-                          <tr>
-                            <td class="idx">{i() + 1}</td>
-                            <For each={ds().headers}>{(h) => <td>{r[h]}</td>}</For>
-                          </tr>
+                          <Table.Row>
+                            <Table.Cell class="idx">{i() + 1}</Table.Cell>
+                            <For each={ds().headers}>{(h) => <Table.Cell>{r[h]}</Table.Cell>}</For>
+                          </Table.Row>
                         )}
                       </For>
                       <Show when={ds().rows.length > previewRows().length}>
-                        <tr>
-                          <td class="idx muted">…</td>
-                          <td colSpan={ds().headers.length} class="muted">
+                        <Table.Row>
+                          <Table.Cell class="idx muted">…</Table.Cell>
+                          <Table.Cell colSpan={ds().headers.length} class="muted">
                             and {ds().rows.length - previewRows().length} more
-                          </td>
-                        </tr>
+                          </Table.Cell>
+                        </Table.Row>
                       </Show>
-                    </tbody>
-                  </table>
+                    </Table.Body>
+                  </Table.Root>
                 </div>
               </Section>
 
               <Section
-                title="Text length per column"
+                title="Text Length per Column"
                 actions={
                   <Switch
                     checked={ignoreEmpty()}
@@ -199,38 +196,38 @@ export default function DataPanel() {
                   picked independently, so the "longest" card combines the longest value of every field at once — the worst case for your layout.
                 </p>
                 <div class="table-wrap">
-                  <table class="table stats">
-                    <thead>
-                      <tr>
-                        <th>Column</th>
-                        <th>Shortest</th>
-                        <th>Median</th>
-                        <th>Longest</th>
-                        <th class="num-col">Empty</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table.Root class="table stats">
+                    <Table.Head>
+                      <Table.Row>
+                        <Table.Header>Column</Table.Header>
+                        <Table.Header>Shortest</Table.Header>
+                        <Table.Header>Median</Table.Header>
+                        <Table.Header>Longest</Table.Header>
+                        <Table.Header class="num-col">Empty</Table.Header>
+                      </Table.Row>
+                    </Table.Head>
+                    <Table.Body>
                       <For each={stats()}>
                         {(s) => (
-                          <tr classList={{ used: usedColumns().includes(s.column) }}>
-                            <td>
+                          <Table.Row class={usedColumns().includes(s.column) ? 'used' : undefined}>
+                            <Table.Cell>
                               <strong>{s.column}</strong>
-                            </td>
-                            <td>
+                            </Table.Cell>
+                            <Table.Cell>
                               <span class="val">{s.shortest || <em class="muted">(empty)</em>}</span> <span class="len">{s.minLen}</span>
-                            </td>
-                            <td>
+                            </Table.Cell>
+                            <Table.Cell>
                               <span class="val">{s.median || <em class="muted">(empty)</em>}</span> <span class="len">{s.medianLen}</span>
-                            </td>
-                            <td>
+                            </Table.Cell>
+                            <Table.Cell>
                               <span class="val">{s.longest || <em class="muted">(empty)</em>}</span> <span class="len">{s.maxLen}</span>
-                            </td>
-                            <td class="num-col">{s.empty}</td>
-                          </tr>
+                            </Table.Cell>
+                            <Table.Cell class="num-col">{s.empty}</Table.Cell>
+                          </Table.Row>
                         )}
                       </For>
-                    </tbody>
-                  </table>
+                    </Table.Body>
+                  </Table.Root>
                 </div>
               </Section>
             </>
@@ -238,13 +235,12 @@ export default function DataPanel() {
         </Show>
 
         <Show when={!dataset()}>
-          <div class="notice">
-            <strong>Tip:</strong> you can start designing without data — the template "{template.name}" will show placeholder field names until a
-            CSV is loaded.{' '}
-            <button class="link" onClick={() => setTab('design')}>
+          <Notice class="notice">
+            <strong>Tip:</strong> you can start designing without data — the template will show placeholder field names until a CSV is loaded.{' '}
+            <Button variant="plain" size="md" class="link" onClick={() => setTab('design')}>
               Go to Design
-            </button>
-          </div>
+            </Button>
+          </Notice>
         </Show>
       </div>
     </div>

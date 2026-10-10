@@ -1,10 +1,12 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { ArrowLeft, ChevronLeft, ChevronRight, MoveHorizontal, MoveVertical } from 'lucide-solid';
 import { Portal } from 'solid-js/web';
 import type { PagePreset, Row } from '../lib/types';
 import { PAGE_PRESETS, PX_PER_MM, computeSheetLayout, type SheetLayout } from '../lib/template';
 import { commit, rows, setTab, template, updateTemplate } from '../lib/store';
 import Card from './Card';
-import { Field, NumberField, Section, Select, TextField, Toggle } from './ui';
+import { Text } from './park/text';
+import { Field, NumberField, Section, Select, TextField, Toggle, Notice, Button, IconButton } from './ui';
 
 /** Parse "1-10, 15, 20-22" into zero-based row indexes (input is 1-based). */
 function parseRange(spec: string, max: number): number[] | null {
@@ -141,16 +143,17 @@ export default function PrintPanel() {
             </div>
           </Show>
           <Toggle checked={template.page.landscape} label="Landscape" onChange={(v) => updateTemplate((t) => (t.page.landscape = v))} />
-          <div class="grid3">
-            <Field label="Margin" hint="Most printers need ≥ 5 mm">
-              <NumberField value={template.page.margin} min={0} max={50} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.page.margin = v), false)} />
+          <div class="grid3 paper-spacing-controls">
+            <Field label="Margin">
+              <NumberField value={template.page.margin} min={0} max={50} unit="mm" aria-describedby="paper-margin-hint" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.page.margin = v), false)} />
             </Field>
-            <Field label="Gap ↔">
+            <Field label="Horizontal Gap" labelContent={<>Gap <MoveHorizontal size={14} aria-hidden="true" /></>}>
               <NumberField value={template.page.gapX} min={0} max={50} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.page.gapX = v), false)} />
             </Field>
-            <Field label="Gap ↕">
+            <Field label="Vertical Gap" labelContent={<>Gap <MoveVertical size={14} aria-hidden="true" /></>}>
               <NumberField value={template.page.gapY} min={0} max={50} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.page.gapY = v), false)} />
             </Field>
+            <Text id="paper-margin-hint" textStyle="sm" color="fg.muted" gridColumn="1 / -1" margin="0">Most printers need ≥ 5 mm</Text>
           </div>
         </Section>
 
@@ -159,7 +162,7 @@ export default function PrintPanel() {
           <Toggle checked={template.page.outline} label="Thin grey outline around each card" onChange={(v) => updateTemplate((t) => (t.page.outline = v))} />
         </Section>
 
-        <Section title="What to print" collapsible>
+        <Section title="What to Print" collapsible>
           <Field label="Copies of each card" hint="2 = fold-over or back-to-back in a double-sided holder">
             <NumberField value={template.page.copies} min={1} max={10} step={1} onCommit={commit} onInput={(v) => updateTemplate((t) => (t.page.copies = Math.max(1, Math.round(v))), false)} />
           </Field>
@@ -173,10 +176,10 @@ export default function PrintPanel() {
             <Show
               when={!noFit()}
               fallback={
-                <div class="notice warn small">
+                <Notice warning class="notice warn small">
                   A {template.card.width} × {template.card.height} mm card does not fit on this paper with a {template.page.margin} mm margin. Reduce the
                   margin, switch to landscape or choose a bigger sheet.
-                </div>
+                </Notice>
               }
             >
               <p class="small">
@@ -187,18 +190,18 @@ export default function PrintPanel() {
                 {layout().cols} × {layout().rows} = {layout().perPage} per sheet → <strong>{pages().length}</strong> {pages().length === 1 ? 'sheet' : 'sheets'}
               </p>
               <Show when={altLayout().perPage > layout().perPage}>
-                <div class="notice small" style={{ margin: '4px 0 8px' }}>
+                <Notice class="notice small" style={{ margin: '4px 0 8px' }}>
                   {template.page.landscape ? 'Portrait' : 'Landscape'} would fit {altLayout().perPage} per sheet.{' '}
-                  <button class="link" onClick={() => updateTemplate((t) => (t.page.landscape = !t.page.landscape))}>
+                  <Button variant="plain" size="md" class="link" onClick={() => updateTemplate((t) => (t.page.landscape = !t.page.landscape))}>
                     Switch
-                  </button>
-                </div>
+                  </Button>
+                </Notice>
               </Show>
             </Show>
           </Show>
-          <button class="btn primary wide" disabled={pages().length === 0} onClick={() => void print()}>
+          <Button size="md" class="btn primary wide" disabled={pages().length === 0} onClick={() => void print()}>
             Print / Save as PDF…
-          </button>
+          </Button>
           <p class="muted small">
             In the print dialog choose <strong>Save as PDF</strong> or your printer, set paper size to match, scale <strong>100%</strong> (not "fit to
             page") and margins <strong>None</strong>. Turn on "Background graphics" if colours are missing.
@@ -209,21 +212,21 @@ export default function PrintPanel() {
       <main class="center print-center">
         <div class="toolbar">
           <div class="row gap">
-            <button class="btn" onClick={() => setTab('design')}>
-              ← Back to design
-            </button>
+            <Button variant="outline" size="md" class="btn" onClick={() => setTab('design')}>
+              <ArrowLeft aria-hidden="true" /> Back to design
+            </Button>
           </div>
           <Show when={pages().length > 0}>
             <div class="row gap">
-              <button class="btn icon" disabled={pageIndex() === 0} onClick={() => setPageIndex((i) => i - 1)}>
-                ‹
-              </button>
+              <IconButton variant="outline" size="xs" class="btn icon" aria-label="Previous sheet" disabled={pageIndex() === 0} onClick={() => setPageIndex((i) => i - 1)}>
+                <ChevronLeft aria-hidden="true" />
+              </IconButton>
               <span class="small">
                 Sheet {pageIndex() + 1} of {pages().length}
               </span>
-              <button class="btn icon" disabled={pageIndex() >= pages().length - 1} onClick={() => setPageIndex((i) => i + 1)}>
-                ›
-              </button>
+              <IconButton variant="outline" size="xs" class="btn icon" aria-label="Next sheet" disabled={pageIndex() >= pages().length - 1} onClick={() => setPageIndex((i) => i + 1)}>
+                <ChevronRight aria-hidden="true" />
+              </IconButton>
             </div>
           </Show>
         </div>
@@ -234,9 +237,9 @@ export default function PrintPanel() {
               <div class="empty-state muted">
                 <Show when={rows().length === 0} fallback={<p>Nothing to show — adjust the paper settings.</p>}>
                   <p>Load a CSV first.</p>
-                  <button class="btn" onClick={() => setTab('data')}>
+                  <Button variant="outline" size="md" class="btn" onClick={() => setTab('data')}>
                     Go to Data
-                  </button>
+                  </Button>
                 </Show>
               </div>
             }

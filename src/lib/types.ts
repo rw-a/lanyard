@@ -127,7 +127,6 @@ export type AssetStore = Record<string, string>;
 export interface Template {
   /** 1 = pictures inline as data URLs (legacy), 2 = pictures in `assets`. */
   version: 2;
-  name: string;
   card: CardSettings;
   page: PageSettings;
   elements: TemplateElement[];

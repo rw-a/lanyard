@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { field, getTemplate, goTo, loadSample, openApp, setField } from './helpers';
+import { field, getTemplate, goTo, loadSample, openApp, setField, selectOption, setChecked } from './helpers';
 
 async function openPrint(page: import('@playwright/test').Page) {
   await loadSample(page);
@@ -16,7 +16,7 @@ test.describe('Print tab', () => {
     await expect(page.locator('.empty-state')).toContainText('Load a CSV first');
     await expect(page.getByRole('button', { name: /Print \/ Save as PDF/ })).toBeDisabled();
     await page.locator('.empty-state').getByRole('button', { name: 'Go to Data' }).click();
-    await expect(page.getByTestId('tab-data')).toHaveClass(/active/);
+    await expect(page.getByTestId('tab-data')).toHaveAttribute('aria-selected', 'true');
   });
 
   test('lays 100 × 140 cards out 2 × 2 on A4 and paginates', async ({ page }) => {
@@ -40,11 +40,11 @@ test.describe('Print tab', () => {
     ]);
 
     // Last page holds the remaining 1 card
-    await page.locator('.toolbar .btn.icon', { hasText: '›' }).click({ clickCount: 6 });
+    await page.getByRole('button', { name: 'Next sheet', exact: true }).click({ clickCount: 6 });
     await expect(page.locator('.toolbar')).toContainText('Sheet 7 of 7');
     await expect(sheet.locator('.sheet-card')).toHaveCount(1);
     await expect(sheet.locator('.sheet-card .card')).toContainText('Camp Director');
-    await expect(page.locator('.toolbar .btn.icon', { hasText: '›' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Next sheet', exact: true })).toBeDisabled();
   });
 
   test('crop marks and outlines can be toggled', async ({ page }) => {
@@ -52,30 +52,30 @@ test.describe('Print tab', () => {
     const marks = page.locator('.sheet-stage .sheet-marks');
     await expect(marks.locator('line')).toHaveCount(16); // 4 x-positions × 2 + 4 y-positions × 2
     await expect(marks.locator('rect')).toHaveCount(0);
-    await page.getByLabel('Thin grey outline around each card').check();
+    await setChecked(page.getByLabel('Thin grey outline around each card'), true);
     await expect(marks.locator('rect')).toHaveCount(4);
-    await page.getByLabel('Crop marks in the margins').uncheck();
+    await setChecked(page.getByLabel('Crop marks in the margins'), false);
     await expect(marks.locator('line')).toHaveCount(0);
-    await page.getByLabel('Thin grey outline around each card').uncheck();
+    await setChecked(page.getByLabel('Thin grey outline around each card'), false);
     await expect(page.locator('.sheet-stage .sheet-marks')).toHaveCount(0);
   });
 
   test('paper presets, custom size, landscape and margins change the layout', async ({ page }) => {
     await openPrint(page);
-    await field(page, 'Size').selectOption('A3');
+    await selectOption(page, field(page, 'Size'), 'A3');
     await expect(summary(page)).toContainText('2 × 2 = 4 per sheet'); // 287 wide → 2 cols; 410 tall → 2 rows
-    await page.getByLabel('Landscape').check();
+    await setChecked(page.getByLabel('Landscape'), true);
     await expect(summary(page)).toContainText('4 × 2 = 8 per sheet → 4 sheets'); // 410 × 287
-    await page.getByLabel('Landscape').uncheck();
+    await setChecked(page.getByLabel('Landscape'), false);
 
-    await field(page, 'Size').selectOption('Letter');
+    await selectOption(page, field(page, 'Size'), 'Letter');
     await expect(summary(page)).toContainText('2 × 1 = 2 per sheet'); // 269 mm tall → 1 row of 140
     await setField(page, 'Margin', 0);
     await expect(summary(page)).toContainText('2 × 1 = 2 per sheet'); // 279 still < 280
-    await field(page, 'Size').selectOption('A4');
+    await selectOption(page, field(page, 'Size'), 'A4');
     await setField(page, 'Margin', 5);
 
-    await field(page, 'Size').selectOption('custom');
+    await selectOption(page, field(page, 'Size'), 'custom');
     await setField(page, 'Width', 320);
     await setField(page, 'Height', 450);
     await expect(summary(page)).toContainText('3 × 3 = 9 per sheet → 3 sheets');
@@ -85,10 +85,10 @@ test.describe('Print tab', () => {
 
   test('gaps reduce how many fit and are reflected in card positions', async ({ page }) => {
     await openPrint(page);
-    await setField(page, 'Gap ↔', 10);
+    await setField(page, 'Horizontal Gap', 10);
     await expect(summary(page)).toContainText('1 × 2 = 2 per sheet → 13 sheets');
-    await setField(page, 'Gap ↔', 0);
-    await setField(page, 'Gap ↕', 4);
+    await setField(page, 'Horizontal Gap', 0);
+    await setField(page, 'Vertical Gap', 4);
     await expect(summary(page)).toContainText('2 × 2 = 4 per sheet'); // 2 × 140 + 4 = 284 ≤ 287
     const tops = await page.locator('.sheet-stage .sheet-card').evaluateAll((els) => els.map((e) => (e as HTMLElement).style.top));
     expect(tops[0]).toBe(tops[1]);
@@ -142,8 +142,8 @@ test.describe('Print tab', () => {
 
   test('"Back to design" returns to the Design tab', async ({ page }) => {
     await openPrint(page);
-    await page.getByRole('button', { name: '← Back to design' }).click();
-    await expect(page.getByTestId('tab-design')).toHaveClass(/active/);
+    await page.getByRole('button', { name: 'Back to design', exact: true }).click();
+    await expect(page.getByTestId('tab-design')).toHaveAttribute('aria-selected', 'true');
   });
 
   test('printing mounts every sheet with an exact @page size', async ({ page }) => {

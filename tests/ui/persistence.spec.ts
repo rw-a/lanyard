@@ -11,7 +11,7 @@ test.describe('Persistence', () => {
     await page.locator('#content-editor').fill('{{Name}} ★');
 
     await page.reload();
-    await expect(page.getByTestId('tab-design')).toHaveClass(/active/); // opens on Design when data exists
+    await expect(page.getByTestId('tab-design')).toHaveAttribute('aria-selected', 'true'); // opens on Design when data exists
     await expect(page.getByTestId('tab-data')).toContainText('25');
     expect((await getElement(page, 'Name')).x).toBe(20);
     expect(await canvasTexts(page)).toContain('Priya Raman ★');
@@ -19,7 +19,7 @@ test.describe('Persistence', () => {
 
   test('a fresh visit with no data opens on the Data tab', async ({ page }) => {
     await openApp(page);
-    await expect(page.getByTestId('tab-data')).toHaveClass(/active/);
+    await expect(page.getByTestId('tab-data')).toHaveAttribute('aria-selected', 'true');
     expect(await storedGet(page, 'dataset')).toBeUndefined();
     expect(await page.evaluate(() => window.lanyardMaker.storage.name())).toBe('indexeddb');
   });
@@ -63,7 +63,7 @@ test.describe('Persistence', () => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'Drop your CSV here' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Drop Your CSV Here' })).toBeVisible();
     expect(errors).toEqual([]);
   });
 
@@ -101,36 +101,38 @@ test.describe('Persistence – storage backend', () => {
     await waitForElement(page, 'Name', (el) => el.x === 7);
   });
 
-  test('state saved by older versions in localStorage is migrated into IndexedDB', async ({ page }) => {
-    await openApp(page);
-    await page.evaluate(
-      ({ keys }) => {
-        const t = window.lanyardMaker.getTemplate() as unknown as { version: number; name: string };
-        t.version = 1;
-        t.name = 'From the old days';
-        localStorage.setItem(keys.template, JSON.stringify(t));
-        localStorage.setItem(keys.pristine, '1');
-        const ds = { fileName: 'old.csv', headers: ['Name', 'Accommodation', 'Group'], rows: [{ Name: 'Ada', Accommodation: 'Cabin 1', Group: 'Red' }] };
-        localStorage.setItem(keys.dataset, JSON.stringify(ds));
-      },
-      { keys: LEGACY_LOCAL_KEYS },
-    );
-    await page.reload();
-    await expect(page.locator('.topbar')).toContainText('From the old days');
-    await expect(page.getByTestId('tab-data')).toContainText('1');
-    await expect(page.getByTestId('tab-design')).toHaveClass(/active/);
-    expect((await storedGet<Template>(page, 'template'))!.name).toBe('From the old days');
-    expect((await storedGet<Template>(page, 'template'))!.version).toBe(2);
-    expect((await storedGet<Dataset>(page, 'dataset'))!.rows).toHaveLength(1);
-    expect(await storedGet(page, 'template-pristine')).toBe(true);
-    // The old copies are gone so they are not migrated twice
-    expect(await page.evaluate((keys) => Object.values(keys).map((k) => localStorage.getItem(k)), LEGACY_LOCAL_KEYS)).toEqual([null, null, null]);
-    // …and the migrated template still counts as pristine: loading a CSV rebinds it
-    await goTo(page, 'data');
-    await pasteCsv(page, 'Who,Where\nBo,Tent 2\n');
-    await goTo(page, 'design');
-    expect(await canvasTexts(page)).toContain('Bo');
-  });
+  for (const version of [1, 2]) {
+    test(`version ${version} state in localStorage is migrated into IndexedDB without its old card name`, async ({ page }) => {
+      await openApp(page);
+      await page.evaluate(
+        ({ keys, version }) => {
+          const t = { ...window.lanyardMaker.getTemplate(), version, name: 'From the old days' };
+          t.card.width = 95;
+          localStorage.setItem(keys.template, JSON.stringify(t));
+          localStorage.setItem(keys.pristine, '1');
+          const ds = { fileName: 'old.csv', headers: ['Name', 'Accommodation', 'Group'], rows: [{ Name: 'Ada', Accommodation: 'Cabin 1', Group: 'Red' }] };
+          localStorage.setItem(keys.dataset, JSON.stringify(ds));
+        },
+        { keys: LEGACY_LOCAL_KEYS, version },
+      );
+      await page.reload();
+      await expect(page.getByTestId('topbar-info')).toHaveText('95 × 140 mm');
+      await expect(page.getByTestId('tab-data')).toContainText('1');
+      await expect(page.getByTestId('tab-design')).toHaveAttribute('aria-selected', 'true');
+      await expect.poll(() => storedGet<Template>(page, 'template')).not.toHaveProperty('name');
+      expect((await storedGet<Template>(page, 'template'))!.card.width).toBe(95);
+      expect((await storedGet<Template>(page, 'template'))!.version).toBe(2);
+      expect((await storedGet<Dataset>(page, 'dataset'))!.rows).toHaveLength(1);
+      expect(await storedGet(page, 'template-pristine')).toBe(true);
+      // The old copies are gone so they are not migrated twice
+      expect(await page.evaluate((keys) => Object.values(keys).map((k) => localStorage.getItem(k)), LEGACY_LOCAL_KEYS)).toEqual([null, null, null]);
+      // …and the migrated template still counts as pristine: loading a CSV rebinds it
+      await goTo(page, 'data');
+      await pasteCsv(page, 'Who,Where\nBo,Tent 2\n');
+      await goTo(page, 'design');
+      expect(await canvasTexts(page)).toContain('Bo');
+    });
+  }
 
   test('a roster far beyond the old 5 MB localStorage limit is saved and reloaded', async ({ page }) => {
     await openApp(page);
@@ -139,7 +141,7 @@ test.describe('Persistence – storage backend', () => {
       lines.push(`Person ${String(i).padStart(5, '0')},Cabin ${i % 40},Group ${i % 7},Contact ${i} 555-${String(i % 10_000).padStart(4, '0')}`);
     }
     await page.locator('input[type=file]').first().setInputFiles({ name: 'big.csv', mimeType: 'text/csv', buffer: Buffer.from(lines.join('\n')) });
-    await expect(page.getByText(/big\.csv — 50000 people/)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/big\.csv — 50000 People/)).toBeVisible({ timeout: 20_000 });
     await expect.poll(async () => (await storedGet<Dataset>(page, 'dataset'))?.rows.length, { timeout: 20_000 }).toBe(50_000);
     const json = await page.evaluate(() => JSON.stringify(window.lanyardMaker.getDataset()).length);
     expect(json).toBeGreaterThan(5 * 1024 * 1024);

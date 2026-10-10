@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { goTo, openApp, pasteCsv, storedGet } from './helpers';
+import { goTo, openApp, pasteCsv, storedGet, setChecked } from './helpers';
 
 test.describe('Data tab', () => {
   test('starts empty with a drop zone and the design shortcut', async ({ page }) => {
     await openApp(page);
-    await expect(page.getByRole('heading', { name: 'Drop your CSV here' })).toBeVisible();
-    await expect(page.getByTestId('tab-data')).toHaveClass(/active/);
+    await expect(page.getByRole('heading', { name: 'Drop Your CSV Here' })).toBeVisible();
+    await expect(page.getByTestId('tab-data')).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('button', { name: 'Choose file…' })).toBeVisible();
     await expect(page.getByText(/start designing without data/)).toBeVisible();
   });
@@ -14,7 +14,7 @@ test.describe('Data tab', () => {
     await openApp(page);
     await page.getByRole('button', { name: 'Load sample roster' }).click();
 
-    await expect(page.getByText(/sample-camp-roster\.csv — 25 people, 6 columns/i)).toBeVisible();
+    await expect(page.getByText(/sample-camp-roster\.csv — 25 People, 6 Columns/i)).toBeVisible();
     await expect(page.getByTestId('tab-data')).toContainText('25');
 
     const table = page.locator('.table').first();
@@ -42,7 +42,7 @@ test.describe('Data tab', () => {
       mimeType: 'text/csv',
       buffer: Buffer.from('Name,Accommodation,Group\nAda,Cabin 1,Red\nBob,Cabin 2,Blue\n'),
     });
-    await expect(page.getByText(/roster\.csv — 2 people, 3 columns/)).toBeVisible();
+    await expect(page.getByText(/roster\.csv — 2 People, 3 Columns/)).toBeVisible();
     await expect(page.getByTestId('tab-data')).toContainText('2');
   });
 
@@ -58,13 +58,13 @@ test.describe('Data tab', () => {
     await expect(dropzone).toHaveClass(/over/);
     await dropzone.dispatchEvent('drop', { dataTransfer: dt });
     await expect(dropzone).not.toHaveClass(/over/);
-    await expect(page.getByText(/dropped\.csv — 3 people, 2 columns/)).toBeVisible();
+    await expect(page.getByText(/dropped\.csv — 3 People, 2 Columns/)).toBeVisible();
   });
 
   test('pastes semicolon-separated text with a BOM, quotes and empty cells', async ({ page }) => {
     await openApp(page);
     await pasteCsv(page, '﻿First name;Last name;Cabin;Team\nAda;Lovelace;"Lakeside Lodge; Room 2";Red\nBo;Li;;Blue\n');
-    await expect(page.getByText(/pasted\.csv — 2 people, 4 columns/)).toBeVisible();
+    await expect(page.getByText(/pasted\.csv — 2 People, 4 Columns/)).toBeVisible();
     const table = page.locator('.table').first();
     await expect(table.locator('thead th')).toHaveText(['#', 'First name', 'Last name', 'Cabin', 'Team']);
     await expect(table).toContainText('Lakeside Lodge; Room 2');
@@ -79,9 +79,9 @@ test.describe('Data tab', () => {
     await pasteCsv(page, 'Name,Cabin\nAda,\nBob,Tent 4\nCy,Lodge 12\n');
     const cabinRow = page.locator('.table.stats tr', { hasText: 'Cabin' });
     await expect(cabinRow.locator('td').nth(1)).toContainText('Tent 4');
-    await page.getByLabel('Ignore empty cells').uncheck();
+    await setChecked(page.getByLabel('Ignore empty cells'), false);
     await expect(cabinRow.locator('td').nth(1)).toContainText('(empty)');
-    await page.getByLabel('Ignore empty cells').check();
+    await setChecked(page.getByLabel('Ignore empty cells'), true);
     await expect(cabinRow.locator('td').nth(1)).toContainText('Tent 4');
   });
 
@@ -89,7 +89,7 @@ test.describe('Data tab', () => {
     await openApp(page);
     await pasteCsv(page, 'A,B\n1,2,3\n4,5\n');
     await expect(page.locator('.notice.warn')).toContainText(/Row 2 has 3 cells/);
-    await expect(page.getByText(/pasted\.csv — 2 people, 2 columns/)).toBeVisible();
+    await expect(page.getByText(/pasted\.csv — 2 People, 2 Columns/)).toBeVisible();
   });
 
   test('flags template fields that are missing from the loaded CSV', async ({ page }) => {
