@@ -279,6 +279,8 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   margin-top: 12px;
 }
 .dropzone-icon {
+  display: flex;
+  justify-content: center;
   color: var(--accent);
   margin-bottom: 4px;
 }
