@@ -61,7 +61,7 @@ export default function TemplateBasics() {
           <ColorField value={template.card.bg} onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.bg = v), false)} />
         </Field>
         <span class="card-background-separator" aria-hidden="true" />
-        <Field label="Background Image" block hint="Printed behind everything, scaled to cover the card.">
+        <Field label="Background Image" block>
           <div class="row gap wrap">
             <Button variant="outline" size="xs" class="btn small" onClick={() => bgInput.click()}>
               {template.card.bgImage ? 'Replace…' : 'Upload…'}
