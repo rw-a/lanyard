@@ -5,10 +5,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare": "panda codegen",
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "panda codegen && tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tests/tsconfig.json",
+    "typecheck": "panda codegen && tsc --noEmit && tsc --noEmit -p tests/tsconfig.json",
     "test": "playwright test",
     "test:unit": "playwright test --project=unit",
     "test:ui": "playwright test --project=chromium",
@@ -16,10 +17,16 @@
     "test:report": "playwright show-report"
   },
   "dependencies": {
+    "@ark-ui/solid": "^5.39.3",
+    "lucide-solid": "^1.54.0",
     "papaparse": "^5.4.1",
     "solid-js": "^1.9.3"
   },
   "devDependencies": {
+    "@pandacss/dev": "^2.2.0",
+    "@pandacss/preset-base": "^2.2.0",
+    "@pandacss/preset-panda": "^2.2.0",
+    "@park-ui/cli": "^1.0.1",
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.4",
     "@types/papaparse": "^5.3.15",

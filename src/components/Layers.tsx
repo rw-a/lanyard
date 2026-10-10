@@ -4,7 +4,7 @@ import { headers, selectedId, setSelectedId, template, updateElement, updateTemp
 import type { FitStatus, TemplateElement } from '../lib/types';
 import { IconArrowDown, IconArrowUp, IconEye, IconEyeOff, IconImage, IconLock, IconPlus, IconShape, IconText, IconUnlock } from './icons';
 import TemplateBasics from './TemplateBasics';
-import { Section } from './ui';
+import { Section, IconButton, Button, Select } from './ui';
 
 interface Props {
   fitMap: Map<string, FitStatus>;
@@ -64,31 +64,27 @@ export default function Layers(props: Props) {
       <Section title="Add" collapsible>
         <div class="add-grid">
           <Show when={headers().length > 0}>
-            <select
-              class="input"
+            <Select
+              label="Add field from CSV"
               value={fieldPick()}
-              onChange={(e) => {
-                addField(e.currentTarget.value);
-                e.currentTarget.value = '';
-                e.currentTarget.blur(); // so arrow keys / Delete act on the new element, not the dropdown
-              }}
-            >
-              <option value="">＋ Field from CSV…</option>
-              <For each={headers()}>{(h) => <option value={h}>{h}</option>}</For>
-            </select>
+              placeholder="＋ Field from CSV…"
+              options={headers().map((h) => ({ value: h, label: h }))}
+              onChange={addField}
+              onSelectionComplete={() => (document.activeElement as HTMLElement)?.blur()}
+            />
           </Show>
-          <button class="btn add-icon" aria-label="Add text" title="Add text" onClick={() => add(newTextElement({ content: 'Static text', w: template.card.width - 12, x: 6, y: 10, h: 10 }))}>
+          <IconButton variant="outline" size="xs" class="btn add-icon" aria-label="Add text" title="Add text" onClick={() => add(newTextElement({ content: 'Static text', w: template.card.width - 12, x: 6, y: 10, h: 10 }))}>
             <IconPlus size={12} />
             <IconText size={20} />
-          </button>
-          <button class="btn add-icon" aria-label="Add shape" title="Add shape" onClick={() => add(newRectElement({ x: 0, y: template.card.height - 20, w: template.card.width, h: 20 }))}>
+          </IconButton>
+          <IconButton variant="outline" size="xs" class="btn add-icon" aria-label="Add shape" title="Add shape" onClick={() => add(newRectElement({ x: 0, y: template.card.height - 20, w: template.card.width, h: 20 }))}>
             <IconPlus size={12} />
             <IconShape size={20} />
-          </button>
-          <button class="btn add-icon" aria-label="Add image or logo" title="Add image or logo" onClick={() => add(newImageElement({ x: 6, y: 6, w: 25, h: 25 }))}>
+          </IconButton>
+          <IconButton variant="outline" size="xs" class="btn add-icon" aria-label="Add image or logo" title="Add image or logo" onClick={() => add(newImageElement({ x: 6, y: 6, w: 25, h: 25 }))}>
             <IconPlus size={12} />
             <IconImage size={20} />
-          </button>
+          </IconButton>
         </div>
       </Section>
 
@@ -134,19 +130,19 @@ export default function Layers(props: Props) {
                 </span>
                 {/* Overlaid on the right of the row and faded in on hover/focus: never changes the row's size. */}
                 <span class="layer-actions">
-                  <button type="button" class="icon-btn" title="Move up (towards the front)" aria-label={`Move ${el.name} up`} onClick={(e) => {
+                  <IconButton variant="plain" size="2xs" type="button" class="icon-btn" title="Move up (towards the front)" aria-label={`Move ${el.name} up`} onClick={(e) => {
                       e.stopPropagation();
                       move(el.id, +1);
                     }}>
                     <IconArrowUp />
-                  </button>
-                  <button type="button" class="icon-btn" title="Move down (towards the back)" aria-label={`Move ${el.name} down`} onClick={(e) => {
+                  </IconButton>
+                  <IconButton variant="plain" size="2xs" type="button" class="icon-btn" title="Move down (towards the back)" aria-label={`Move ${el.name} down`} onClick={(e) => {
                       e.stopPropagation();
                       move(el.id, -1);
                     }}>
                     <IconArrowDown />
-                  </button>
-                  <button
+                  </IconButton>
+                  <IconButton variant="plain" size="2xs"
                     type="button"
                     class="icon-btn"
                     aria-pressed={el.locked}
@@ -160,8 +156,8 @@ export default function Layers(props: Props) {
                     <Show when={el.locked} fallback={<IconUnlock />}>
                       <IconLock />
                     </Show>
-                  </button>
-                  <button
+                  </IconButton>
+                  <IconButton variant="plain" size="2xs"
                     type="button"
                     class="icon-btn"
                     aria-pressed={el.hidden}
@@ -175,7 +171,7 @@ export default function Layers(props: Props) {
                     <Show when={el.hidden} fallback={<IconEye />}>
                       <IconEyeOff />
                     </Show>
-                  </button>
+                  </IconButton>
                 </span>
               </li>
             )}
@@ -183,12 +179,12 @@ export default function Layers(props: Props) {
         </ul>
         <Show when={selectedId()}>
           <div class="row gap" style={{ 'margin-top': '8px' }}>
-            <button class="btn small" onClick={props.onDuplicate}>
+            <Button variant="outline" size="xs" class="btn small" onClick={props.onDuplicate}>
               Duplicate
-            </button>
-            <button class="btn small danger" onClick={props.onRemove}>
+            </Button>
+            <Button variant="outline" size="xs" colorPalette="red" class="btn small danger" onClick={props.onRemove}>
               Delete
-            </button>
+            </Button>
           </div>
         </Show>
       </Section>

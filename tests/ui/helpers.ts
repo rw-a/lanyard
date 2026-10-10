@@ -18,7 +18,7 @@ export async function openApp(page: Page) {
 
 export async function goTo(page: Page, tab: 'data' | 'design' | 'print') {
   await page.getByTestId(`tab-${tab}`).click();
-  await expect(page.getByTestId(`tab-${tab}`)).toHaveClass(/active/);
+  await expect(page.getByTestId(`tab-${tab}`)).toHaveAttribute('aria-selected', 'true');
 }
 
 /** Load the built-in sample roster (25 people) and land on the Design tab. */
@@ -58,6 +58,21 @@ export async function selectLayer(page: Page, name: string) {
 /** The form control inside the inspector field with this label. */
 export function field(page: Page, label: string): Locator {
   return page.locator(`[data-field="${label}"]`).locator('input, select, textarea').first();
+}
+
+/** Choose through the visible Park UI menu rather than its hidden form select. */
+export async function selectOption(page: Page, select: Locator, value: string | { label: string }) {
+  const label = typeof value === 'string'
+    ? await select.locator('option').evaluateAll((options, selected) => (options.find((o) => (o as HTMLOptionElement).value === selected) as HTMLOptionElement)?.textContent ?? '', value)
+    : value.label;
+  const root = select.locator('..');
+  await root.getByRole('combobox').click();
+  await page.getByRole('option', { name: label, exact: true }).click();
+}
+
+export async function setChecked(control: Locator, checked: boolean) {
+  if (await control.isChecked() !== checked) await control.locator('..').click();
+  await expect(control).toBeChecked({ checked });
 }
 
 /** Type a number into an inspector field (fires input events like a user would). */

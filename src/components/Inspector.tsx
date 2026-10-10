@@ -24,7 +24,7 @@ import {
   template,
   updateElement,
 } from '../lib/store';
-import { ColorField, Field, NumberField, SegButtons, Section, Select, TextField, Toggle } from './ui';
+import { ColorField, Field, NumberField, SegButtons, Section, Select, TextField, Toggle, Button, Notice, Textarea, Input } from './ui';
 
 export default function Inspector() {
   return (
@@ -68,12 +68,12 @@ function CardInspector() {
     <>
       <Section title="Template files" collapsible>
         <div class="row gap wrap">
-          <button class="btn small" onClick={exportTemplate}>
+          <Button variant="outline" size="xs" class="btn small" onClick={exportTemplate}>
             Export JSON
-          </button>
-          <button class="btn small" onClick={() => importInput.click()}>
+          </Button>
+          <Button variant="outline" size="xs" class="btn small" onClick={() => importInput.click()}>
             Import JSON
-          </button>
+          </Button>
           <input
             ref={importInput}
             type="file"
@@ -88,12 +88,12 @@ function CardInspector() {
           <Show
             when={confirmReset()}
             fallback={
-              <button class="btn small" onClick={() => setConfirmReset(true)}>
+              <Button variant="outline" size="xs" class="btn small" onClick={() => setConfirmReset(true)}>
                 Reset to default
-              </button>
+              </Button>
             }
           >
-            <button
+            <Button variant="outline" size="xs" colorPalette="red"
               class="btn small danger"
               onClick={() => {
                 replaceTemplate(defaultTemplate(headers()));
@@ -102,18 +102,18 @@ function CardInspector() {
               }}
             >
               Really reset?
-            </button>
-            <button class="btn small" onClick={() => setConfirmReset(false)}>
+            </Button>
+            <Button variant="outline" size="xs" class="btn small" onClick={() => setConfirmReset(false)}>
               Cancel
-            </button>
+            </Button>
           </Show>
         </div>
         <p class="muted small">The template is saved in this browser automatically. Export it to keep a copy or share it.</p>
         <Show when={missingColumns().length > 0}>
-          <div class="notice warn small">
+          <Notice warning class="notice warn small">
             These fields are not in your CSV: {missingColumns().map((c) => `{{${c}}}`).join(', ')}. Select the element and pick a column from
             "Insert field".
-          </div>
+          </Notice>
         </Show>
       </Section>
 
@@ -188,13 +188,13 @@ function ElementInspector(props: { el: TemplateElement }) {
           </Field>
         </div>
         <div class="row gap wrap">
-          <button class="btn small" onClick={() => set((el) => (el.x = (template.card.width - el.w) / 2), true)}>
+          <Button variant="outline" size="xs" class="btn small" onClick={() => set((el) => (el.x = (template.card.width - el.w) / 2), true)}>
             Centre horizontally
-          </button>
-          <button class="btn small" onClick={() => set((el) => (el.y = (template.card.height - el.h) / 2), true)}>
+          </Button>
+          <Button variant="outline" size="xs" class="btn small" onClick={() => set((el) => (el.y = (template.card.height - el.h) / 2), true)}>
             Centre vertically
-          </button>
-          <button
+          </Button>
+          <Button variant="outline" size="xs"
             class="btn small"
             onClick={() =>
               set((el) => {
@@ -204,7 +204,7 @@ function ElementInspector(props: { el: TemplateElement }) {
             }
           >
             Full width
-          </button>
+          </Button>
         </div>
       </Section>
 
@@ -242,7 +242,7 @@ function TextInspector(props: { el: TextElement }) {
   return (
     <>
       <Section title="Content" collapsible>
-        <textarea
+        <Textarea
           id="content-editor"
           ref={textarea}
           class="input content"
@@ -253,16 +253,14 @@ function TextInspector(props: { el: TextElement }) {
           placeholder="Type text and insert {{fields}}"
         />
         <div class="row gap">
-          <select
-            class="input compact"
-            onChange={(e) => {
-              insertField(e.currentTarget.value);
-              e.currentTarget.value = '';
-            }}
-          >
-            <option value="">Insert field…</option>
-            <For each={headers()}>{(h) => <option value={h}>{h}</option>}</For>
-          </select>
+          <Select
+            label="Insert field"
+            value=""
+            placeholder="Insert field…"
+            options={headers().map((h) => ({ value: h, label: h }))}
+            onChange={insertField}
+            onSelectionComplete={() => textarea.focus()}
+          />
         </div>
         <p class="muted small">
           Mix fixed text with fields, e.g. <code>Cabin {'{{Accommodation}}'}</code>. Line breaks are kept.
@@ -295,15 +293,15 @@ function TextInspector(props: { el: TextElement }) {
           <Toggle checked={props.el.wrap} label="Wrap lines" onChange={(v) => set((el) => (el.wrap = v), true)} />
         </div>
         <div class="row gap wrap">
-          <button class="btn small" classList={{ active: props.el.bold }} style={{ 'font-weight': '700' }} onClick={() => set((el) => (el.bold = !el.bold), true)}>
+          <Button variant="outline" size="xs" class="btn small" aria-pressed={props.el.bold} data-state={props.el.bold ? 'on' : 'off'} style={{ 'font-weight': '700' }} onClick={() => set((el) => (el.bold = !el.bold), true)}>
             B
-          </button>
-          <button class="btn small" classList={{ active: props.el.italic }} style={{ 'font-style': 'italic' }} onClick={() => set((el) => (el.italic = !el.italic), true)}>
+          </Button>
+          <Button variant="outline" size="xs" class="btn small" aria-pressed={props.el.italic} data-state={props.el.italic ? 'on' : 'off'} style={{ 'font-style': 'italic' }} onClick={() => set((el) => (el.italic = !el.italic), true)}>
             I
-          </button>
-          <button class="btn small" classList={{ active: props.el.uppercase }} onClick={() => set((el) => (el.uppercase = !el.uppercase), true)}>
+          </Button>
+          <Button variant="outline" size="xs" class="btn small" aria-pressed={props.el.uppercase} data-state={props.el.uppercase ? 'on' : 'off'} onClick={() => set((el) => (el.uppercase = !el.uppercase), true)}>
             AA
-          </button>
+          </Button>
         </div>
         <div class="grid2">
           <Field label="Align">
@@ -453,13 +451,13 @@ function ImageInspector(props: { el: ImageElement }) {
             <Show when={props.el.src}>
               <img class="thumb" src={imageUrl(template.assets, props.el.src)} alt="" />
             </Show>
-            <button class="btn small" onClick={() => input.click()}>
+            <Button variant="outline" size="xs" class="btn small" onClick={() => input.click()}>
               {props.el.src ? 'Replace…' : 'Upload…'}
-            </button>
+            </Button>
             <Show when={props.el.src}>
-              <button class="btn small" onClick={() => set((el) => (el.src = ''), true)}>
+              <Button variant="outline" size="xs" class="btn small" onClick={() => set((el) => (el.src = ''), true)}>
                 Remove
-              </button>
+              </Button>
             </Show>
           </div>
           <input
@@ -578,13 +576,13 @@ function ImageRuleEditor(props: { rule: ImageRule; onChange: (r: ImageRule) => v
         hint="Upload several at once: files are matched to values by name, e.g. bears.png → “Bears”."
       >
         <div class="row gap wrap">
-          <button class="btn small primary" data-testid="bulk-upload-button" onClick={() => bulkInput.click()}>
+          <Button size="xs" class="btn small primary" data-testid="bulk-upload-button" onClick={() => bulkInput.click()}>
             Upload for all values…
-          </button>
+          </Button>
           <Show when={assigned() > 0}>
-            <button class="btn small" onClick={() => props.onChange({ ...props.rule, map: {} })}>
+            <Button variant="outline" size="xs" class="btn small" onClick={() => props.onChange({ ...props.rule, map: {} })}>
               Clear all
-            </button>
+            </Button>
           </Show>
         </div>
         <input
@@ -633,7 +631,7 @@ function ImageRuleEditor(props: { rule: ImageRule; onChange: (r: ImageRule) => v
                 {v || <em class="muted">(empty)</em>}
               </span>
               <span class="row gap-s">
-                <button
+                <Button variant="outline" size="2xs"
                   class="btn tiny"
                   onClick={() => {
                     singleTarget = v;
@@ -641,9 +639,9 @@ function ImageRuleEditor(props: { rule: ImageRule; onChange: (r: ImageRule) => v
                   }}
                 >
                   {props.rule.map[v] ? 'Replace' : 'Upload'}
-                </button>
+                </Button>
                 <Show when={props.rule.map[v]}>
-                  <button
+                  <Button variant="outline" size="2xs"
                     class="btn tiny"
                     title="Remove this picture"
                     onClick={() => {
@@ -653,7 +651,7 @@ function ImageRuleEditor(props: { rule: ImageRule; onChange: (r: ImageRule) => v
                     }}
                   >
                     ✕
-                  </button>
+                  </Button>
                 </Show>
               </span>
             </div>
@@ -665,13 +663,13 @@ function ImageRuleEditor(props: { rule: ImageRule; onChange: (r: ImageRule) => v
           </Show>
           <span class="val muted">Anything else</span>
           <span class="row gap-s">
-            <button class="btn tiny" onClick={() => fallbackInput.click()}>
+            <Button variant="outline" size="2xs" class="btn tiny" onClick={() => fallbackInput.click()}>
               {props.rule.fallback ? 'Replace' : 'Upload'}
-            </button>
+            </Button>
             <Show when={props.rule.fallback}>
-              <button class="btn tiny" title="Remove the fallback picture" onClick={() => props.onChange({ ...props.rule, fallback: '' })}>
+              <Button variant="outline" size="2xs" class="btn tiny" title="Remove the fallback picture" onClick={() => props.onChange({ ...props.rule, fallback: '' })}>
                 ✕
-              </button>
+              </Button>
             </Show>
           </span>
           <input
@@ -713,7 +711,8 @@ function ColorRuleEditor(props: { rule: ColorRule | null; onChange: (r: ColorRul
             <For each={values()}>
               {(v) => (
                 <label class="color-rule-row">
-                  <input
+                  <Input
+                    size="sm"
                     type="color"
                     class="color"
                     value={rule().map[v] ?? rule().fallback}
@@ -727,12 +726,12 @@ function ColorRuleEditor(props: { rule: ColorRule | null; onChange: (r: ColorRul
               )}
             </For>
             <label class="color-rule-row">
-              <input type="color" class="color" value={rule().fallback} onInput={(e) => props.onChange({ ...rule(), fallback: e.currentTarget.value })} />
+              <Input size="sm" type="color" class="color" value={rule().fallback} onInput={(e) => props.onChange({ ...rule(), fallback: e.currentTarget.value })} />
               <span class="val muted">Anything else</span>
             </label>
-            <button class="btn tiny" onClick={() => props.onChange(buildColorRule(rows(), rule().column))}>
+            <Button variant="outline" size="2xs" class="btn tiny" onClick={() => props.onChange(buildColorRule(rows(), rule().column))}>
               Re-assign palette
-            </button>
+            </Button>
           </div>
         )}
       </Show>

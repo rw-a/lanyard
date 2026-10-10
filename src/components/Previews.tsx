@@ -1,9 +1,10 @@
+import { button } from 'styled-system/recipes';
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { PX_PER_MM, elementLabel } from '../lib/template';
 import { extremes, ignoreEmpty, previewSource, rows, setIgnoreEmpty, setPreviewSource, setSelectedId, template, usedColumns } from '../lib/store';
 import { fitProblem, type FitStatus, type Row } from '../lib/types';
 import Card from './Card';
-import { Switch } from './ui';
+import { Switch, Table, Collapsible, SurfaceCard } from './ui';
 
 interface Variant {
   key: 'shortest' | 'median' | 'longest';
@@ -17,7 +18,7 @@ interface Variant {
  * value (by character count) across the whole CSV. The longest one is the stress
  * test for the layout; the shortest shows whether short values still look balanced.
  */
-export default function Previews(props: { height: number }) {
+export default function Previews() {
   const [zoom, setZoom] = createSignal(0.6);
   let strip!: HTMLDivElement;
 
@@ -73,7 +74,7 @@ export default function Previews(props: { height: number }) {
   const canvasVariantName = () => previewSource().type;
 
   return (
-    <section class="previews" style={{ height: `${props.height}px` }}>
+    <section class="previews">
       <header class="previews-head">
         <div class="previews-title">
           <h3>Fit check</h3>
@@ -105,39 +106,41 @@ export default function Previews(props: { height: number }) {
         </div>
       </Show>
       <Show when={hasData() && usedColumns().length > 0}>
-        <details class="preview-details">
-          <summary class="small muted">Which values are being used?</summary>
-          <table class="table small stats">
-            <thead>
-              <tr>
-                <th>Field</th>
-                <th>Shortest</th>
-                <th>Median</th>
-                <th>Longest</th>
-              </tr>
-            </thead>
-            <tbody>
-              <For each={extremes().stats}>
-                {(s) => (
-                  <tr>
-                    <td>
-                      <strong>{s.column}</strong>
-                    </td>
-                    <td>
-                      <span class="val">{s.shortest || <em class="muted">(empty)</em>}</span> <span class="len">{s.minLen}</span>
-                    </td>
-                    <td>
-                      <span class="val">{s.median || <em class="muted">(empty)</em>}</span> <span class="len">{s.medianLen}</span>
-                    </td>
-                    <td>
-                      <span class="val">{s.longest || <em class="muted">(empty)</em>}</span> <span class="len">{s.maxLen}</span>
-                    </td>
-                  </tr>
-                )}
-              </For>
-            </tbody>
-          </table>
-        </details>
+        <Collapsible.Root class="preview-details">
+          <Collapsible.Trigger class={button({ variant: 'plain', size: 'xs' })}>Which values are being used?</Collapsible.Trigger>
+          <Collapsible.Content>
+            <Table.Root class="table small stats">
+              <Table.Head>
+                <Table.Row>
+                  <Table.Header>Field</Table.Header>
+                  <Table.Header>Shortest</Table.Header>
+                  <Table.Header>Median</Table.Header>
+                  <Table.Header>Longest</Table.Header>
+                </Table.Row>
+              </Table.Head>
+              <Table.Body>
+                <For each={extremes().stats}>
+                  {(s) => (
+                    <Table.Row>
+                      <Table.Cell>
+                        <strong>{s.column}</strong>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <span class="val">{s.shortest || <em class="muted">(empty)</em>}</span> <span class="len">{s.minLen}</span>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <span class="val">{s.median || <em class="muted">(empty)</em>}</span> <span class="len">{s.medianLen}</span>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <span class="val">{s.longest || <em class="muted">(empty)</em>}</span> <span class="len">{s.maxLen}</span>
+                      </Table.Cell>
+                    </Table.Row>
+                  )}
+                </For>
+              </Table.Body>
+            </Table.Root>
+          </Collapsible.Content>
+        </Collapsible.Root>
       </Show>
     </section>
   );
@@ -158,7 +161,7 @@ function PreviewCard(props: { variant: Variant; zoom: number; enabled: boolean }
   const h = () => template.card.height * PX_PER_MM * props.zoom;
 
   return (
-    <div class="preview" data-testid={`preview-${props.variant.key}`} classList={{ 'has-overflow': hasProblem(), disabled: !props.enabled }}>
+    <SurfaceCard.Root class={`preview${hasProblem() ? ' has-overflow' : ''}${!props.enabled ? ' disabled' : ''}`} data-testid={`preview-${props.variant.key}`}>
       <header>
         <strong>{props.variant.title}</strong>
         <span class="muted small">{props.variant.blurb}</span>
@@ -201,6 +204,6 @@ function PreviewCard(props: { variant: Variant; zoom: number; enabled: boolean }
           </Show>
         </Show>
       </footer>
-    </div>
+    </SurfaceCard.Root>
   );
 }

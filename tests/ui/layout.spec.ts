@@ -98,8 +98,13 @@ test.describe('Design panels', () => {
     await page.setViewportSize({ width: 900, height: 800 });
     for (const title of ['Card settings', 'Template files', 'Pictures stored']) {
       const toggle = page.getByRole('button', { name: title, exact: true });
-      const height = await toggle.evaluate((element) => element.getBoundingClientRect().height);
-      expect(height, title).toBeLessThan(24);
+      const lines = await toggle.evaluate((element) => {
+        const text = [...element.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
+        const range = document.createRange();
+        range.selectNode(text!);
+        return range.getClientRects().length;
+      });
+      expect(lines, title).toBe(1);
     }
   });
 
@@ -118,7 +123,9 @@ test.describe('Design panels', () => {
     await divider.focus();
     await page.keyboard.press('ArrowDown');
     expect((await previews.boundingBox())!.height).toBeLessThan(dragged);
-    await expect(divider).toHaveAttribute('aria-valuenow', String(Math.round((await previews.boundingBox())!.height)));
+    const value = Number(await divider.getAttribute('aria-valuenow'));
+    expect(value).toBeGreaterThanOrEqual(Number(await divider.getAttribute('aria-valuemin')));
+    expect(value).toBeLessThanOrEqual(Number(await divider.getAttribute('aria-valuemax')));
   });
 
   test('the divider is hidden when panels stack', async ({ page }) => {

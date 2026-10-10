@@ -15,6 +15,8 @@ import {
   selectLayer,
   setField,
   waitForElement,
+  selectOption,
+  setChecked,
 } from './helpers';
 
 test.describe('Designer – canvas', () => {
@@ -37,11 +39,11 @@ test.describe('Designer – canvas', () => {
   test('preview source switches between shortest, median, longest and a specific row', async ({ page }) => {
     await loadSample(page);
     const select = page.getByTestId('preview-source').locator('select');
-    await select.selectOption('shortest');
+    await selectOption(page, select, 'shortest');
     expect((await canvasTexts(page))[1]).toBe('Kai');
-    await select.selectOption('longest');
+    await selectOption(page, select, 'longest');
     expect((await canvasTexts(page))[1]).toBe('Maximilian Alexander von Habsburg-Lothringen');
-    await select.selectOption('row:0');
+    await selectOption(page, select, 'row:0');
     expect((await canvasTexts(page))[1]).toBe('Li Wu');
     // row options are labelled with the person's name
     await expect(select.locator('option[value="row:1"]')).toHaveText(/Amara Okafor-Blackwood/);
@@ -172,10 +174,28 @@ test.describe('Designer – canvas', () => {
     expect(w2).toBeLessThan(w1);
     await pct.click(); // fit to view
     await expect(pct).toHaveText(`${initial}%`);
+    await expect.poll(() => page.locator('.canvas-area').evaluate((area) => area.scrollHeight - area.clientHeight)).toBeLessThanOrEqual(1);
   });
 });
 
 test.describe('Designer – keyboard', () => {
+  test('dropdown keys preserve the selected element and shortcuts work after adding a field', async ({ page }) => {
+    await loadSample(page);
+    await selectLayer(page, 'Name');
+    const name = await getElement(page, 'Name');
+    await page.getByRole('combobox', { name: 'Preview with' }).focus();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    expect(await getElement(page, 'Name')).toEqual(name);
+    await page.keyboard.press('Escape');
+
+    await selectOption(page, page.locator('.add-grid select'), 'Role');
+    await expect(page.getByRole('option', { name: 'Role', exact: true })).toBeHidden();
+    const role = await getElement(page, 'Role');
+    await page.keyboard.press('ArrowDown');
+    await waitForElement(page, 'Role', (el) => el.y === role.y + 1);
+  });
+
   test('arrow keys nudge by 1 mm, Shift by 5 mm, Alt by 0.1 mm', async ({ page }) => {
     await loadSample(page);
     await selectLayer(page, 'Name');
@@ -250,7 +270,7 @@ test.describe('Designer – layers panel', () => {
 
   test('adds a CSV field, static text, a shape and an image', async ({ page }) => {
     await loadSample(page);
-    await page.locator('.add-grid select').selectOption('Role');
+    await selectOption(page, page.locator('.add-grid select'), 'Role');
     await expect(layer(page, 'Role')).toHaveClass(/active/);
     expect((await getElement(page, 'Role')).kind).toBe('text');
     expect(await canvasTexts(page)).toContain('Camper'); // median Role
@@ -267,6 +287,8 @@ test.describe('Designer – layers panel', () => {
 
   test('hovering a layer never moves or resizes any row (no jiggle)', async ({ page }) => {
     await loadSample(page);
+    await page.getByRole('button', { name: 'Card settings', exact: true }).click();
+    await expect(page.locator('.side.left [data-field="Name"]')).toBeHidden();
     const geometry = () =>
       page.locator('[data-testid="layer"]').evaluateAll((rows) =>
         rows.map((r) => {
@@ -328,6 +350,7 @@ test.describe('Designer – layers panel', () => {
   test('clicking anywhere on a layer row outside the icons selects it', async ({ page }) => {
     await loadSample(page);
     const row = layer(page, 'Accommodation');
+    await row.scrollIntoViewIfNeeded();
     const box = (await row.boundingBox())!;
     const firstIcon = (await row.locator('.icon-btn').first().boundingBox())!;
     // the gap between the name and the first icon, inside the overlay's fade area
@@ -390,7 +413,7 @@ test.describe('Designer – inspector', () => {
     await expect(ta).toHaveValue('{{Name}}');
     await ta.fill('Hello {{Name}}');
     await expect.poll(async () => (await canvasTexts(page))[1]).toBe('Hello Priya Raman');
-    await page.locator('.side.right select', { hasText: 'Insert field…' }).selectOption('Group');
+    await selectOption(page, page.getByRole('combobox', { name: 'Insert field' }).locator('../..').locator('select'), 'Group');
     await expect(ta).toHaveValue('Hello {{Name}}{{Group}}');
     await expect.poll(async () => (await canvasTexts(page))[1]).toBe('Hello Priya RamanOtters');
   });
@@ -411,7 +434,7 @@ test.describe('Designer – inspector', () => {
     await expect(inner).toHaveCSS('text-align', 'left');
     await setField(page, 'Size', 10);
     await expect(inner).toHaveCSS('font-size', /^13\.33/); // 10pt
-    await field(page, 'Family').selectOption({ label: 'Georgia' });
+    await selectOption(page, field(page, 'Family'), { label: 'Georgia' });
     await expect(inner).toHaveCSS('font-family', /Georgia/);
   });
 
@@ -419,14 +442,14 @@ test.describe('Designer – inspector', () => {
     await loadSample(page);
     await selectLayer(page, 'Name');
     await expect(field(page, 'Min size')).toBeEnabled();
-    await page.getByLabel('Shrink to fit').uncheck();
+    await setChecked(page.getByLabel('Shrink to fit'), false);
     await expect(field(page, 'Min size')).toBeDisabled();
   });
 
   test('colour by field assigns a distinct fill per value and renders it', async ({ page }) => {
     await loadSample(page);
     await selectLayer(page, 'Group band');
-    await field(page, 'Colour by field').selectOption('Group');
+    await selectOption(page, field(page, 'Colour by field'), 'Group');
     const rows = page.locator('.color-rule-row');
     await expect(rows).toHaveCount(7); // 6 groups + "Anything else"
     const rule = (await getElement(page, 'Group band')) as { colorRule: { map: Record<string, string> } };
@@ -440,12 +463,12 @@ test.describe('Designer – inspector', () => {
     await expect(band).toHaveCSS('background-color', `rgb(${r}, ${g}, ${b})`);
 
     // picking a different value changes the fill
-    await page.getByTestId('preview-source').locator('select').selectOption('shortest'); // Bears
+    await selectOption(page, page.getByTestId('preview-source').locator('select'), 'shortest'); // Bears
     const hex2 = rule.colorRule.map.Bears;
     const [r2, g2, b2] = [1, 3, 5].map((i) => parseInt(hex2.slice(i, i + 2), 16));
     await expect(band).toHaveCSS('background-color', `rgb(${r2}, ${g2}, ${b2})`);
 
-    await field(page, 'Colour by field').selectOption('');
+    await selectOption(page, field(page, 'Colour by field'), '');
     await expect(rows).toHaveCount(0);
   });
 
@@ -471,6 +494,9 @@ test.describe('Designer – inspector', () => {
     expect(uploadBox.x).toBeGreaterThan(separatorBox.x + separatorBox.width);
     const widthBox = (await settings.locator('[data-field="Width"]').boundingBox())!;
     const heightBox = (await settings.locator('[data-field="Height"]').boundingBox())!;
+    const presetBox = (await settings.locator('[data-field="Preset"]').getByRole('combobox').boundingBox())!;
+    const widthInputBox = (await settings.locator('[data-field="Width"] input').boundingBox())!;
+    expect(Math.abs(presetBox.height - widthInputBox.height)).toBeLessThan(1);
     const swap = settings.getByRole('button', { name: 'Swap orientation' });
     const swapBox = (await swap.boundingBox())!;
     expect(Math.abs(widthBox.y - heightBox.y)).toBeLessThan(1);
@@ -479,7 +505,7 @@ test.describe('Designer – inspector', () => {
     await expect(swap).toHaveText('');
     await expect(page.locator('.side.left [data-field="Preset"]')).toBeVisible();
     await expect(page.locator('.side.right [data-field="Preset"]')).toHaveCount(0);
-    await field(page, 'Preset').selectOption({ label: 'A7 (74 × 105)' });
+    await selectOption(page, field(page, 'Preset'), { label: 'A7 (74 × 105)' });
     await expect(page.locator('.topbar')).toContainText('74 × 105 mm');
     await setField(page, 'Width', 90);
     await expect(field(page, 'Preset')).toHaveValue('custom');

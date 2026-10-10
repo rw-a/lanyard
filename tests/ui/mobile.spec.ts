@@ -1,5 +1,5 @@
 import { expect, test, type CDPSession } from '@playwright/test';
-import { canvasCard, getElement, loadSample, waitForElement } from './helpers';
+import { canvasCard, getElement, loadSample, waitForElement, setChecked } from './helpers';
 
 test.use({ viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true });
 
@@ -48,7 +48,7 @@ test('touch moves and resizes a box; Move view pans the zoomed canvas', async ({
   await waitForElement(page, 'Name', (el) => el.h < moved.h);
 
   for (let i = 0; i < 8; i++) await page.getByTitle('Zoom in').click();
-  await page.getByRole('checkbox', { name: 'Move view' }).check();
+  await setChecked(page.getByRole('checkbox', { name: 'Move view' }), true);
   await expect(page.getByRole('checkbox', { name: 'Move view' })).toBeChecked();
   const unchanged = await getElement(page, 'Name');
   const area = (await page.locator('.canvas-area').boundingBox())!;

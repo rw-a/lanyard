@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { goTo, openApp, pasteCsv, storedGet } from './helpers';
+import { goTo, openApp, pasteCsv, storedGet, setChecked } from './helpers';
 
 test.describe('Data tab', () => {
   test('starts empty with a drop zone and the design shortcut', async ({ page }) => {
     await openApp(page);
     await expect(page.getByRole('heading', { name: 'Drop your CSV here' })).toBeVisible();
-    await expect(page.getByTestId('tab-data')).toHaveClass(/active/);
+    await expect(page.getByTestId('tab-data')).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('button', { name: 'Choose file…' })).toBeVisible();
     await expect(page.getByText(/start designing without data/)).toBeVisible();
   });
@@ -79,9 +79,9 @@ test.describe('Data tab', () => {
     await pasteCsv(page, 'Name,Cabin\nAda,\nBob,Tent 4\nCy,Lodge 12\n');
     const cabinRow = page.locator('.table.stats tr', { hasText: 'Cabin' });
     await expect(cabinRow.locator('td').nth(1)).toContainText('Tent 4');
-    await page.getByLabel('Ignore empty cells').uncheck();
+    await setChecked(page.getByLabel('Ignore empty cells'), false);
     await expect(cabinRow.locator('td').nth(1)).toContainText('(empty)');
-    await page.getByLabel('Ignore empty cells').check();
+    await setChecked(page.getByLabel('Ignore empty cells'), true);
     await expect(cabinRow.locator('td').nth(1)).toContainText('Tent 4');
   });
 

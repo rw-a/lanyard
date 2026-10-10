@@ -11,7 +11,7 @@ test.describe('Persistence', () => {
     await page.locator('#content-editor').fill('{{Name}} ★');
 
     await page.reload();
-    await expect(page.getByTestId('tab-design')).toHaveClass(/active/); // opens on Design when data exists
+    await expect(page.getByTestId('tab-design')).toHaveAttribute('aria-selected', 'true'); // opens on Design when data exists
     await expect(page.getByTestId('tab-data')).toContainText('25');
     expect((await getElement(page, 'Name')).x).toBe(20);
     expect(await canvasTexts(page)).toContain('Priya Raman ★');
@@ -19,7 +19,7 @@ test.describe('Persistence', () => {
 
   test('a fresh visit with no data opens on the Data tab', async ({ page }) => {
     await openApp(page);
-    await expect(page.getByTestId('tab-data')).toHaveClass(/active/);
+    await expect(page.getByTestId('tab-data')).toHaveAttribute('aria-selected', 'true');
     expect(await storedGet(page, 'dataset')).toBeUndefined();
     expect(await page.evaluate(() => window.lanyardMaker.storage.name())).toBe('indexeddb');
   });
@@ -118,7 +118,7 @@ test.describe('Persistence – storage backend', () => {
     await page.reload();
     await expect(page.locator('.topbar')).toContainText('From the old days');
     await expect(page.getByTestId('tab-data')).toContainText('1');
-    await expect(page.getByTestId('tab-design')).toHaveClass(/active/);
+    await expect(page.getByTestId('tab-design')).toHaveAttribute('aria-selected', 'true');
     expect((await storedGet<Template>(page, 'template'))!.name).toBe('From the old days');
     expect((await storedGet<Template>(page, 'template'))!.version).toBe(2);
     expect((await storedGet<Dataset>(page, 'dataset'))!.rows).toHaveLength(1);

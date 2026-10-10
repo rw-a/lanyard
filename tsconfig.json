@@ -1,5 +1,10 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "styled-system/*": ["./styled-system/*"]
+    },
     "target": "ES2020",
     "module": "ESNext",
     "moduleResolution": "bundler",
@@ -16,5 +21,5 @@
     "skipLibCheck": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "styled-system", "vite.config.ts", "panda.config.ts"]
 }
