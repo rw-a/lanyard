@@ -53,6 +53,10 @@ export default function Designer() {
   /** Fit status per text element for the card currently on the canvas. */
   const [fitMap, setFitMap] = createSignal<Map<string, FitStatus>>(new Map());
   const [canvasSize, setCanvasSize] = createSignal({ width: 0, height: 0 });
+  const [previewHeight, setPreviewHeight] = createSignal(300);
+  let center!: HTMLElement;
+  let previewsDivider!: HTMLDivElement;
+  let previewDrag: { pointerId: number; startY: number; startHeight: number } | null = null;
   let canvasArea!: HTMLDivElement;
   let drag: DragState | null = null;
   let pan: PanState | null = null;
@@ -86,6 +90,7 @@ export default function Designer() {
       window.removeEventListener('pointerup', endPan);
       window.removeEventListener('pointercancel', endPan);
       document.body.classList.remove('dragging');
+      document.body.classList.remove('resizing-preview');
     });
   });
 
@@ -356,13 +361,29 @@ export default function Designer() {
 
   const handleSizePx = () => (window.matchMedia('(pointer: coarse)').matches ? 28 : 9) / zoom();
 
+  function previewMaxHeight() {
+    const toolbar = center?.querySelector('.toolbar') as HTMLElement | null;
+    return Math.max(100, (center?.clientHeight ?? 0) - (toolbar?.offsetHeight ?? 0) - 188);
+  }
+
+  function resizePreviews(height: number) {
+    setPreviewHeight(clamp(height, 100, previewMaxHeight()));
+  }
+
+  function finishPreviewResize(e: PointerEvent) {
+    if (previewDrag?.pointerId !== e.pointerId) return;
+    previewDrag = null;
+    previewsDivider.releasePointerCapture(e.pointerId);
+    document.body.classList.remove('resizing-preview');
+  }
+
   return (
     <div class="design-layout">
       <aside class="side left">
         <Layers fitMap={fitMap()} onDuplicate={duplicateSelected} onRemove={removeSelected} />
       </aside>
 
-      <main class="center">
+      <main class="center" ref={center}>
         <div class="toolbar">
           <div class="row gap">
             <button class="btn icon" title="Undo (Ctrl+Z)" disabled={!canUndo()} onClick={undo}>
@@ -500,7 +521,39 @@ export default function Designer() {
           </div>
         </div>
 
-        <Previews />
+        <div
+          ref={previewsDivider}
+          class="previews-divider"
+          role="separator"
+          aria-label="Resize card previews and template editor"
+          aria-orientation="horizontal"
+          aria-valuemin={100}
+          aria-valuemax={Math.max(previewHeight(), previewMaxHeight())}
+          aria-valuenow={previewHeight()}
+          tabIndex={0}
+          onPointerDown={(e) => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            previewDrag = { pointerId: e.pointerId, startY: e.clientY, startHeight: previewsDivider.nextElementSibling?.getBoundingClientRect().height ?? previewHeight() };
+            previewsDivider.setPointerCapture(e.pointerId);
+            document.body.classList.add('resizing-preview');
+          }}
+          onPointerMove={(e) => {
+            if (previewDrag?.pointerId === e.pointerId) resizePreviews(previewDrag.startHeight + previewDrag.startY - e.clientY);
+          }}
+          onPointerUp={finishPreviewResize}
+          onPointerCancel={finishPreviewResize}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+              e.preventDefault();
+              resizePreviews(previewHeight() + (e.key === 'ArrowUp' ? 20 : -20));
+            } else if (e.key === 'Home' || e.key === 'End') {
+              e.preventDefault();
+              resizePreviews(e.key === 'Home' ? 100 : previewMaxHeight());
+            }
+          }}
+        />
+        <Previews height={previewHeight()} />
       </main>
 
       <aside class="side right">

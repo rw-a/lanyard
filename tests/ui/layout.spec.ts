@@ -73,3 +73,57 @@ test.describe('Top bar', () => {
     }
   });
 });
+
+test.describe('Design panels', () => {
+  test('left and right sections collapse independently and keep their controls', async ({ page }) => {
+    await loadSample(page);
+    const settings = page.locator('.side.left .section').filter({ has: page.getByRole('heading', { name: 'Card settings' }) });
+    const files = page.locator('.side.right .section').filter({ has: page.getByRole('heading', { name: 'Template files' }) });
+    const settingsToggle = settings.getByRole('button', { name: 'Card settings' });
+    const filesToggle = files.getByRole('button', { name: 'Template files' });
+
+    await settingsToggle.click();
+    await expect(settingsToggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(settings.getByText('Card size')).toBeHidden();
+    await expect(files.getByRole('button', { name: 'Export JSON' })).toBeVisible();
+
+    await filesToggle.click();
+    await expect(files.getByRole('button', { name: 'Export JSON' })).toBeHidden();
+    await settingsToggle.click();
+    await expect(settings.getByText('Card size')).toBeVisible();
+  });
+
+  test('sidebar section titles stay on one line', async ({ page }) => {
+    await loadSample(page);
+    await page.setViewportSize({ width: 900, height: 800 });
+    for (const title of ['Card settings', 'Template files', 'Pictures stored']) {
+      const toggle = page.getByRole('button', { name: title, exact: true });
+      const height = await toggle.evaluate((element) => element.getBoundingClientRect().height);
+      expect(height, title).toBeLessThan(24);
+    }
+  });
+
+  test('the editor and fit check divider supports drag and keyboard resizing', async ({ page }) => {
+    await loadSample(page);
+    const divider = page.getByRole('separator', { name: 'Resize card previews and template editor' });
+    const previews = page.locator('.previews');
+    const initial = (await previews.boundingBox())!.height;
+    const box = (await divider.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y - 80, { steps: 5 });
+    await page.mouse.up();
+    const dragged = (await previews.boundingBox())!.height;
+    expect(dragged).toBeGreaterThan(initial + 60);
+    await divider.focus();
+    await page.keyboard.press('ArrowDown');
+    expect((await previews.boundingBox())!.height).toBeLessThan(dragged);
+    await expect(divider).toHaveAttribute('aria-valuenow', String(Math.round((await previews.boundingBox())!.height)));
+  });
+
+  test('the divider is hidden when panels stack', async ({ page }) => {
+    await loadSample(page);
+    await page.setViewportSize({ width: 700, height: 900 });
+    await expect(page.getByRole('separator', { name: 'Resize card previews and template editor' })).toBeHidden();
+  });
+});

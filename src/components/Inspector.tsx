@@ -66,7 +66,7 @@ function CardInspector() {
 
   return (
     <>
-      <Section title="Template files">
+      <Section title="Template files" collapsible>
         <div class="row gap wrap">
           <button class="btn small" onClick={exportTemplate}>
             Export JSON
@@ -117,7 +117,7 @@ function CardInspector() {
         </Show>
       </Section>
 
-      <Section title="Pictures stored" data-testid="asset-summary">
+      <Section title="Pictures stored" data-testid="asset-summary" collapsible>
         <Show when={storedPictures().length > 0} fallback={<p class="muted small">No pictures stored.</p>}>
           <ul class="stored-pictures">
             <For each={storedPictures()}>
@@ -134,7 +134,7 @@ function CardInspector() {
         <p class="muted small">The same picture used in several places is stored once.</p>
       </Section>
 
-      <Section title="Tips">
+      <Section title="Tips" collapsible>
         <ul class="tips small muted">
           <li>Click an element on the card to edit it. Click empty space to come back here.</li>
           <li>
@@ -161,7 +161,7 @@ function ElementInspector(props: { el: TemplateElement }) {
 
   return (
     <>
-      <Section title={props.el.kind === 'text' ? 'Text box' : props.el.kind === 'rect' ? 'Shape' : 'Image'}>
+      <Section title={props.el.kind === 'text' ? 'Text box' : props.el.kind === 'rect' ? 'Shape' : 'Image'} collapsible>
         <Field label="Layer name">
           <TextField value={props.el.name} onCommit={commit} onInput={(v) => set((el) => (el.name = v))} />
         </Field>
@@ -241,7 +241,7 @@ function TextInspector(props: { el: TextElement }) {
 
   return (
     <>
-      <Section title="Content">
+      <Section title="Content" collapsible>
         <textarea
           id="content-editor"
           ref={textarea}
@@ -269,7 +269,7 @@ function TextInspector(props: { el: TextElement }) {
         </p>
       </Section>
 
-      <Section title="Font">
+      <Section title="Font" collapsible>
         <Field label="Family">
           <Select value={props.el.fontFamily} options={FONT_FAMILIES} onChange={(v) => set((el) => (el.fontFamily = v), true)} />
         </Field>
@@ -339,7 +339,7 @@ function TextInspector(props: { el: TextElement }) {
         </div>
       </Section>
 
-      <Section title="Colours & box">
+      <Section title="Colours & box" collapsible>
         <div class="grid2">
           <Field label="Text colour">
             <ColorField value={props.el.color} onCommit={commit} onInput={(v) => set((el) => (el.color = v))} />
@@ -373,7 +373,7 @@ function TextInspector(props: { el: TextElement }) {
 function RectInspector(props: { el: RectElement }) {
   const set = (fn: (el: RectElement) => void, record = false) => updateElement<RectElement>(props.el.id, fn, record);
   return (
-    <Section title="Appearance">
+    <Section title="Appearance" collapsible>
       <Field label="Fill">
         <ColorField value={props.el.bg} allowTransparent onCommit={commit} onInput={(v) => set((el) => (el.bg = v))} />
       </Field>
@@ -442,7 +442,7 @@ function ImageInspector(props: { el: ImageElement }) {
   ];
 
   return (
-    <Section title="Image">
+    <Section title="Image" collapsible>
       <Field label="Picture source">
         <Select value={mode()} options={modeOptions()} onChange={setMode} />
       </Field>

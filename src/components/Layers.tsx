@@ -61,7 +61,7 @@ export default function Layers(props: Props) {
   return (
     <>
       <TemplateBasics />
-      <Section title="Add">
+      <Section title="Add" collapsible>
         <div class="add-grid">
           <Show when={headers().length > 0}>
             <select
@@ -92,7 +92,7 @@ export default function Layers(props: Props) {
         </div>
       </Section>
 
-      <Section title={`Layers (${template.elements.length})`}>
+      <Section title={`Layers (${template.elements.length})`} collapsible>
         <Show when={template.elements.length === 0}>
           <p class="muted small">No elements yet. Add a field from your CSV, some text, a colour band or a logo.</p>
         </Show>

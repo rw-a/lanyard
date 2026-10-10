@@ -13,7 +13,7 @@ export default function TemplateBasics() {
   });
 
   return (
-    <Section title="Card settings">
+    <Section title="Card settings" collapsible>
       <Field label="Name">
         <TextField value={template.name} onCommit={commit} onInput={(v) => updateTemplate((t) => (t.name = v), false)} />
       </Field>

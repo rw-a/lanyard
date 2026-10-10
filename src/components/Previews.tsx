@@ -17,7 +17,7 @@ interface Variant {
  * value (by character count) across the whole CSV. The longest one is the stress
  * test for the layout; the shortest shows whether short values still look balanced.
  */
-export default function Previews() {
+export default function Previews(props: { height: number }) {
   const [zoom, setZoom] = createSignal(0.6);
   let strip!: HTMLDivElement;
 
@@ -73,7 +73,7 @@ export default function Previews() {
   const canvasVariantName = () => previewSource().type;
 
   return (
-    <section class="previews">
+    <section class="previews" style={{ height: `${props.height}px` }}>
       <header class="previews-head">
         <div class="previews-title">
           <h3>Fit check</h3>

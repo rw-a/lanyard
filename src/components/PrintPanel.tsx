@@ -116,7 +116,7 @@ export default function PrintPanel() {
   return (
     <div class="print-layout">
       <aside class="side left">
-        <Section title="Paper">
+        <Section title="Paper" collapsible>
           <Field label="Size">
             <Select
               value={template.page.preset}
@@ -154,12 +154,12 @@ export default function PrintPanel() {
           </div>
         </Section>
 
-        <Section title="Cutting">
+        <Section title="Cutting" collapsible>
           <Toggle checked={template.page.cutMarks} label="Crop marks in the margins" onChange={(v) => updateTemplate((t) => (t.page.cutMarks = v))} />
           <Toggle checked={template.page.outline} label="Thin grey outline around each card" onChange={(v) => updateTemplate((t) => (t.page.outline = v))} />
         </Section>
 
-        <Section title="What to print">
+        <Section title="What to print" collapsible>
           <Field label="Copies of each card" hint="2 = fold-over or back-to-back in a double-sided holder">
             <NumberField value={template.page.copies} min={1} max={10} step={1} onCommit={commit} onInput={(v) => updateTemplate((t) => (t.page.copies = Math.max(1, Math.round(v))), false)} />
           </Field>
@@ -168,7 +168,7 @@ export default function PrintPanel() {
           </Field>
         </Section>
 
-        <Section title="Summary" data-testid="print-summary">
+        <Section title="Summary" data-testid="print-summary" collapsible>
           <Show when={rows().length > 0} fallback={<p class="muted small">No data loaded yet — add a CSV on the Data tab.</p>}>
             <Show
               when={!noFit()}

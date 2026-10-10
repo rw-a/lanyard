@@ -61,7 +61,7 @@ test.describe('Images – fixed picture', () => {
     await page.getByTestId('image-upload').setInputFiles(await makePng(page, 'a.png', '#123456'));
     await field(page, 'Fit').selectOption('cover');
     await expect(canvasImage(page)).toHaveCSS('object-fit', 'cover');
-    await field(page, 'Corner radius').fill('5');
+    await page.locator('.side.right [data-field="Corner radius"] input').fill('5');
     await expect(canvasCard(page).locator('.el-image')).toHaveCSS('border-radius', /18\.89/); // 5 mm
   });
 });

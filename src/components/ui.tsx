@@ -1,4 +1,4 @@
-import { For, Show, splitProps, type JSX } from 'solid-js';
+import { For, Show, createSignal, createUniqueId, splitProps, type JSX } from 'solid-js';
 
 /**
  * Labelled form row. Renders a <label> so clicking the caption focuses the control;
@@ -201,14 +201,29 @@ export function SegButtons<T extends string>(props: {
   );
 }
 
-export function Section(props: { title: string; children: JSX.Element; actions?: JSX.Element; 'data-testid'?: string }) {
+export function Section(props: { title: string; children: JSX.Element; actions?: JSX.Element; collapsible?: boolean; 'data-testid'?: string }) {
+  const [expanded, setExpanded] = createSignal(true);
+  const bodyId = createUniqueId();
   return (
     <section class="section" data-testid={props['data-testid']}>
       <header class="section-head">
-        <h3>{props.title}</h3>
+        <h3>
+          <Show when={props.collapsible} fallback={props.title}>
+            <button
+              type="button"
+              class="section-toggle"
+              aria-expanded={expanded()}
+              aria-controls={bodyId}
+              onClick={() => setExpanded(!expanded())}
+            >
+              <span class="section-chevron" aria-hidden="true" />
+              {props.title}
+            </button>
+          </Show>
+        </h3>
         {props.actions}
       </header>
-      <div class="section-body">{props.children}</div>
+      <div id={bodyId} class="section-body" hidden={props.collapsible && !expanded()}>{props.children}</div>
     </section>
   );
 }
