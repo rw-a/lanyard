@@ -13,7 +13,7 @@ import {
   pruneAssets,
   unusedAssetIds,
 } from '../../src/lib/template';
-import type { AssetStore, Template } from '../../src/lib/types';
+import type { AssetStore, ImageElement, Template } from '../../src/lib/types';
 import { dataUrlBytes } from '../../src/lib/images';
 
 const A = 'data:image/png;base64,AAAA';
@@ -87,9 +87,9 @@ test.describe('references and pruning', () => {
     const t = defaultTemplate(['Name', 'Group']);
     const a = internAsset(t.assets, A);
     const b = internAsset(t.assets, B);
-    t.card.bgImage = a;
-    t.elements.push(newImageElement({ src: a }));
-    t.elements.push(newImageElement({ imageRule: { column: 'Group', map: { Bears: b, Lions: a }, fallback: b } }));
+    t.sides.front.bgImage = a;
+    t.sides.front.elements.push(newImageElement({ src: a }));
+    t.sides.front.elements.push(newImageElement({ imageRule: { column: 'Group', map: { Bears: b, Lions: a }, fallback: b } }));
     return t;
   }
 
@@ -105,7 +105,7 @@ test.describe('references and pruning', () => {
     expect(unusedAssetIds(t)).toEqual([]);
     expect(pruneAssets(t)).toBe(0);
     // stop using B everywhere
-    t.elements = t.elements.filter((e) => e.kind !== 'image' || !e.imageRule);
+    t.sides.front.elements = t.sides.front.elements.filter((e) => e.kind !== 'image' || !e.imageRule);
     const [bId] = Object.entries(t.assets).find(([, v]) => v === B)!;
     expect(unusedAssetIds(t)).toEqual([bId]);
     expect(pruneAssets(t)).toBe(1);
@@ -113,25 +113,41 @@ test.describe('references and pruning', () => {
     expect(assetBytes(t.assets)).toBe(A.length);
   });
 
-  test('internAllImages migrates inline data URLs (v1 templates) into the store, deduplicated', () => {
+  test('internAllImages moves inline data URLs on every stored side into the store, deduplicated, without touching the version', () => {
     const t = defaultTemplate(['Group']);
-    (t as unknown as { version: number }).version = 1;
-    t.card.bgImage = A;
-    t.elements.push(newImageElement({ src: A }));
-    t.elements.push(newImageElement({ src: 'https://example.com/logo.png' }));
-    t.elements.push(newImageElement({ imageRule: { column: 'Group', map: { Bears: B, Lions: A }, fallback: B } }));
+    t.sides.front.bgImage = A;
+    t.sides.front.elements.push(newImageElement({ src: A }));
+    t.sides.front.elements.push(newImageElement({ src: 'https://example.com/logo.png' }));
+    t.sides.front.elements.push(newImageElement({ imageRule: { column: 'Group', map: { Bears: B, Lions: A }, fallback: B } }));
+    // A back kept while the badge is one-sided still has its pictures interned.
+    t.sides.back = { bg: '#ffffff', bgImage: B, elements: [newImageElement({ src: A })] };
     internAllImages(t);
-    expect(t.version).toBe(2);
+    expect(t.version).toBe(3);
     expect(Object.keys(t.assets)).toHaveLength(2);
-    expect(imageUrl(t.assets, t.card.bgImage)).toBe(A);
-    const imgs = t.elements.filter((e) => e.kind === 'image') as Extract<Template['elements'][number], { kind: 'image' }>[];
+    expect(imageUrl(t.assets, t.sides.front.bgImage)).toBe(A);
+    const imgs = t.sides.front.elements.filter((e): e is ImageElement => e.kind === 'image');
     expect(isAssetRef(imgs[0].src)).toBe(true);
     expect(imgs[1].src).toBe('https://example.com/logo.png');
     expect(imageUrl(t.assets, imgs[2].imageRule!.map.Bears)).toBe(B);
     expect(imageUrl(t.assets, imgs[2].imageRule!.fallback)).toBe(B);
+    expect(imageUrl(t.assets, t.sides.back.bgImage)).toBe(B);
+    expect((t.sides.back.elements[0] as ImageElement).src).toBe(imgs[0].src); // same picture → same reference
     // idempotent
     const before = JSON.stringify(t);
     internAllImages(t);
     expect(JSON.stringify(t)).toBe(before);
+  });
+
+  test('pictures used only by a saved-but-unused back survive pruning; the last use going frees them', () => {
+    const t = defaultTemplate(['Name']);
+    const b = internAsset(t.assets, B);
+    t.sides.back = { bg: '#ffffff', bgImage: null, elements: [newImageElement({ src: b })] };
+    t.sidedness = 'single'; // the back is not printed, but is kept for later
+    expect(imageRefsIn(t)).toEqual([b]);
+    expect(unusedAssetIds(t)).toEqual([]);
+    expect(pruneAssets(t)).toBe(0);
+    t.sides.back.elements = [];
+    expect(pruneAssets(t)).toBe(1);
+    expect(t.assets).toEqual({});
   });
 });

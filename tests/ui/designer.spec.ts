@@ -59,7 +59,7 @@ test.describe('Designer – canvas', () => {
     await page.locator('.canvas-area').click({ position: { x: 5, y: 5 } });
     await expect(page.getByTestId('selection')).toBeHidden();
     await expect(page.locator('.side.left')).toContainText('Card Settings');
-    await expect(page.locator('.side.left')).toContainText('Background Colour');
+    await expect(page.getByTestId('background-heading')).toHaveText('Background');
     await expect(page.locator('.side.right')).toContainText('Template Files');
 
     // clicking empty card space (not an element) also deselects
@@ -265,7 +265,7 @@ test.describe('Designer – layers panel', () => {
     await layer(page, 'Name').getByTitle(/Move up/).click();
     expect(await names()).toEqual(['Group', 'Group band', 'Accommodation', 'Name', 'Accommodation label', 'Camp title', 'Header band']);
     const t = await getTemplate(page);
-    expect(t.elements.map((e) => e.name).indexOf('Name')).toBeGreaterThan(t.elements.map((e) => e.name).indexOf('Accommodation label'));
+    expect(t.sides.front.elements.map((e) => e.name).indexOf('Name')).toBeGreaterThan(t.sides.front.elements.map((e) => e.name).indexOf('Accommodation label'));
   });
 
   test('adds a CSV field, static text, a shape and an image', async ({ page }) => {
@@ -481,8 +481,18 @@ test.describe('Designer – inspector', () => {
     await expect(settings.getByRole('heading', { name: 'Card Background' })).toHaveCount(0);
     await expect(settings.locator('[data-field="Name"]')).toHaveCount(0);
     await expect(settings.locator('[data-field="Background Image"]')).toBeVisible();
+    // Grouped under a "Background" subheading with short labels; the accessible names stay specific
+    await expect(settings.getByTestId('background-heading')).toHaveText('Background');
+    await expect(settings.locator('[data-field="Background Colour"] .field-label')).toHaveText('Colour');
+    await expect(settings.locator('[data-field="Background Image"] .field-label')).toHaveText('Image');
+    await expect(settings.getByLabel('Background Colour')).toHaveCount(1);
+    // The heading outranks the labels under it
+    const headingWeight = await settings.getByTestId('background-heading').evaluate((e) => +getComputedStyle(e).fontWeight);
+    const labelWeight = await settings.locator('[data-field="Background Colour"] .field-label').evaluate((e) => +getComputedStyle(e).fontWeight);
+    expect(headingWeight).toBeGreaterThan(labelWeight);
+    expect((await settings.getByTestId('background-heading').boundingBox())!.y).toBeLessThan((await settings.locator('[data-field="Background Colour"]').boundingBox())!.y);
     await expect(page.locator('.side.right').getByRole('heading', { name: 'Card Background' })).toHaveCount(0);
-    const radiusBox = (await settings.locator('[data-field="Corner radius"]').boundingBox())!;
+    const radiusBox = (await settings.locator('[data-field="Corner Radius"]').boundingBox())!;
     const backgroundFieldBox = (await settings.locator('[data-field="Background Colour"]').boundingBox())!;
     expect(radiusBox.y + radiusBox.height).toBeLessThan(backgroundFieldBox.y);
     const colourBox = (await settings.locator('[data-field="Background Colour"] input[type="color"]').boundingBox())!;
@@ -491,7 +501,7 @@ test.describe('Designer – inspector', () => {
     const separatorBox = (await separator.boundingBox())!;
     expect(separatorBox.height).toBeGreaterThan(colourBox.height);
     expect(separatorBox.width).toBeLessThan(separatorBox.height);
-    const uploadBox = (await settings.getByRole('button', { name: 'Upload…' }).boundingBox())!;
+    const uploadBox = (await settings.getByRole('button', { name: 'Upload background image' }).boundingBox())!;
     expect(Math.abs(colourBox.y - uploadBox.y)).toBeLessThan(2);
     expect(separatorBox.x).toBeGreaterThan(colourBox.x + colourBox.width);
     expect(uploadBox.x).toBeGreaterThan(separatorBox.x + separatorBox.width);
@@ -524,7 +534,7 @@ test.describe('Designer – inspector', () => {
     expect(narrowSwapBox.y).toBeGreaterThan(narrowHeightBox.y + narrowHeightBox.height);
     const narrowColourBox = (await settings.locator('[data-field="Background Colour"] input[type="color"]').boundingBox())!;
     const narrowSeparatorBox = (await separator.boundingBox())!;
-    const narrowUploadBox = (await settings.getByRole('button', { name: 'Upload…' }).boundingBox())!;
+    const narrowUploadBox = (await settings.getByRole('button', { name: 'Upload background image' }).boundingBox())!;
     expect(Math.abs(narrowColourBox.y - narrowUploadBox.y)).toBeLessThan(2);
     expect(narrowSeparatorBox.x).toBeGreaterThan(narrowColourBox.x + narrowColourBox.width);
     expect(narrowUploadBox.x).toBeGreaterThan(narrowSeparatorBox.x + narrowSeparatorBox.width);
@@ -540,14 +550,14 @@ test.describe('Designer – inspector', () => {
     const json = JSON.parse(text);
     expect(json).not.toHaveProperty('name');
     expect(json).toEqual(await getTemplate(page));
-    expect(json.elements).toHaveLength(7);
+    expect(json.sides.front.elements).toHaveLength(7);
   });
 
   test('import JSON replaces the design and discards an old card name', async ({ page }) => {
     await loadSample(page);
     const t = { ...await getTemplate(page), name: 'Imported' };
     t.card.width = 86;
-    t.elements = t.elements.slice(0, 2);
+    t.sides.front.elements = t.sides.front.elements.slice(0, 2);
     await page.locator('input[type=file][accept*="json"]').setInputFiles({
       name: 'x.lanyard.json',
       mimeType: 'application/json',

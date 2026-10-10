@@ -6,10 +6,13 @@ import type {
   PagePreset,
   RectElement,
   Row,
+  SideDesign,
   Template,
   TemplateElement,
   TextElement,
 } from './types';
+import { TEMPLATE_VERSION } from './types';
+import { getStoredDesigns, getUsedDesigns } from './sides';
 
 export const PX_PER_MM = 96 / 25.4;
 
@@ -139,10 +142,93 @@ export function defaultTemplate(headers: string[] = []): Template {
   const accomCol = find('accommodation', 'accomodation', 'cabin', 'room', 'tent', 'lodge', 'dorm', 'bunk') ?? headers[1] ?? 'Accommodation';
   const groupCol = find('group', 'team', 'tribe', 'house', 'unit', 'role') ?? headers[2] ?? 'Group';
 
+  const elements: TemplateElement[] = [
+    newRectElement({ name: 'Header band', x: 0, y: 0, w: W, h: 34, bg: '#1f6feb', borderRadius: 0 }),
+    newTextElement({
+      name: 'Camp title',
+      x: 6,
+      y: 6,
+      w: W - 12,
+      h: 22,
+      content: 'SUMMER CAMP 2026',
+      fontSize: 20,
+      minFontSize: 10,
+      bold: true,
+      align: 'center',
+      vAlign: 'middle',
+      color: '#ffffff',
+      letterSpacing: 0.04,
+    }),
+    newTextElement({
+      name: 'Name',
+      x: 6,
+      y: 44,
+      w: W - 12,
+      h: 30,
+      content: nameContent,
+      fontSize: 30,
+      minFontSize: 12,
+      bold: true,
+      align: 'center',
+      vAlign: 'middle',
+      color: '#111111',
+    }),
+    newTextElement({
+      name: 'Accommodation label',
+      x: 6,
+      y: 84,
+      w: W - 12,
+      h: 8,
+      content: 'ACCOMMODATION',
+      fontSize: 9,
+      minFontSize: 6,
+      align: 'center',
+      vAlign: 'bottom',
+      color: '#6b7280',
+      letterSpacing: 0.12,
+      shrinkToFit: false,
+    }),
+    newTextElement({
+      name: 'Accommodation',
+      x: 6,
+      y: 92,
+      w: W - 12,
+      h: 18,
+      content: `{{${accomCol}}}`,
+      fontSize: 18,
+      minFontSize: 9,
+      bold: true,
+      align: 'center',
+      vAlign: 'top',
+      color: '#111111',
+    }),
+    newRectElement({ name: 'Group band', x: 0, y: H - 20, w: W, h: 20, bg: '#f59e0b', borderRadius: 0 }),
+    newTextElement({
+      name: 'Group',
+      x: 6,
+      y: H - 18,
+      w: W - 12,
+      h: 16,
+      content: `{{${groupCol}}}`,
+      fontSize: 14,
+      minFontSize: 8,
+      bold: true,
+      align: 'center',
+      vAlign: 'middle',
+      color: '#111111',
+      uppercase: true,
+    }),
+  ];
+
   return {
-    version: 2,
+    version: TEMPLATE_VERSION,
     assets: {},
-    card: { width: W, height: H, bg: '#ffffff', bgImage: null, borderRadius: 3 },
+    card: { width: W, height: H, borderRadius: 3 },
+    sidedness: 'single',
+    sides: {
+      front: { bg: '#ffffff', bgImage: null, elements },
+      back: null,
+    },
     page: {
       preset: 'A4',
       width: 210,
@@ -154,84 +240,8 @@ export function defaultTemplate(headers: string[] = []): Template {
       cutMarks: true,
       outline: false,
       copies: 1,
+      printMethod: 'cutouts',
     },
-    elements: [
-      newRectElement({ name: 'Header band', x: 0, y: 0, w: W, h: 34, bg: '#1f6feb', borderRadius: 0 }),
-      newTextElement({
-        name: 'Camp title',
-        x: 6,
-        y: 6,
-        w: W - 12,
-        h: 22,
-        content: 'SUMMER CAMP 2026',
-        fontSize: 20,
-        minFontSize: 10,
-        bold: true,
-        align: 'center',
-        vAlign: 'middle',
-        color: '#ffffff',
-        letterSpacing: 0.04,
-      }),
-      newTextElement({
-        name: 'Name',
-        x: 6,
-        y: 44,
-        w: W - 12,
-        h: 30,
-        content: nameContent,
-        fontSize: 30,
-        minFontSize: 12,
-        bold: true,
-        align: 'center',
-        vAlign: 'middle',
-        color: '#111111',
-      }),
-      newTextElement({
-        name: 'Accommodation label',
-        x: 6,
-        y: 84,
-        w: W - 12,
-        h: 8,
-        content: 'ACCOMMODATION',
-        fontSize: 9,
-        minFontSize: 6,
-        align: 'center',
-        vAlign: 'bottom',
-        color: '#6b7280',
-        letterSpacing: 0.12,
-        shrinkToFit: false,
-      }),
-      newTextElement({
-        name: 'Accommodation',
-        x: 6,
-        y: 92,
-        w: W - 12,
-        h: 18,
-        content: `{{${accomCol}}}`,
-        fontSize: 18,
-        minFontSize: 9,
-        bold: true,
-        align: 'center',
-        vAlign: 'top',
-        color: '#111111',
-      }),
-      newRectElement({ name: 'Group band', x: 0, y: H - 20, w: W, h: 20, bg: '#f59e0b', borderRadius: 0 }),
-      newTextElement({
-        name: 'Group',
-        x: 6,
-        y: H - 18,
-        w: W - 12,
-        h: 16,
-        content: `{{${groupCol}}}`,
-        fontSize: 14,
-        minFontSize: 8,
-        bold: true,
-        align: 'center',
-        vAlign: 'middle',
-        color: '#111111',
-        uppercase: true,
-      }),
-    ],
   };
 }
 
@@ -246,10 +256,10 @@ export function placeholdersIn(text: string): string[] {
   return out;
 }
 
-/** Every column the template reads from (placeholders, colour rules, image columns). */
-export function columnsUsedBy(template: Template): string[] {
+/** Every column one design reads from (placeholders, colour rules, image columns), hidden layers included. */
+export function columnsUsedByDesign(design: Pick<SideDesign, 'elements'>): string[] {
   const set = new Set<string>();
-  for (const el of template.elements) {
+  for (const el of design.elements) {
     if (el.kind === 'text') {
       placeholdersIn(el.content).forEach((c) => set.add(c));
       if (el.colorRule) set.add(el.colorRule.column);
@@ -260,6 +270,16 @@ export function columnsUsedBy(template: Template): string[] {
       else if (el.srcColumn) set.add(el.srcColumn);
     }
   }
+  return [...set];
+}
+
+/**
+ * Every column the printed output reads from: the front's columns first, then any
+ * extra ones an independent back uses. A saved-but-unused back does not count.
+ */
+export function columnsUsedBy(template: Pick<Template, 'sidedness' | 'sides'>): string[] {
+  const set = new Set<string>();
+  for (const d of getUsedDesigns(template)) columnsUsedByDesign(d).forEach((c) => set.add(c));
   return [...set];
 }
 
@@ -281,7 +301,7 @@ export function elementLabel(el: TemplateElement): string {
 }
 
 /** Current page dimensions in mm, taking orientation into account. */
-export function pageDims(template: Template): { width: number; height: number } {
+export function pageDims(template: Pick<Template, 'page'>): { width: number; height: number } {
   const { width, height, landscape } = template.page;
   return landscape ? { width: height, height: width } : { width, height };
 }
@@ -297,7 +317,7 @@ export interface SheetLayout {
   pageHeight: number;
 }
 
-export function computeSheetLayout(template: Template): SheetLayout {
+export function computeSheetLayout(template: Pick<Template, 'card' | 'page'>): SheetLayout {
   const { width: pageWidth, height: pageHeight } = pageDims(template);
   const { margin, gapX, gapY } = template.page;
   const cw = template.card.width;
@@ -480,11 +500,11 @@ export function imageUrl(assets: AssetStore | undefined, ref: string | null | un
   return ref;
 }
 
-/** Every picture reference the template uses (elements, rules, fallbacks, background). */
-export function imageRefsIn(t: Template): string[] {
+/** Every picture reference one design uses (elements, rules, fallbacks, background). */
+export function imageRefsInDesign(d: SideDesign): string[] {
   const refs: string[] = [];
-  if (t.card.bgImage) refs.push(t.card.bgImage);
-  for (const el of t.elements) {
+  if (d.bgImage) refs.push(d.bgImage);
+  for (const el of d.elements) {
     if (el.kind !== 'image') continue;
     if (el.src) refs.push(el.src);
     if (el.imageRule) {
@@ -495,14 +515,19 @@ export function imageRefsIn(t: Template): string[] {
   return refs;
 }
 
+/** Every picture reference in every stored design, including a back that is saved but not currently used. */
+export function imageRefsIn(t: Pick<Template, 'sides'>): string[] {
+  return getStoredDesigns(t).flatMap(imageRefsInDesign);
+}
+
 /** Ids of stored pictures nothing refers to any more. */
-export function unusedAssetIds(t: Template): string[] {
+export function unusedAssetIds(t: Pick<Template, 'sides' | 'assets'>): string[] {
   const used = new Set(imageRefsIn(t).filter(isAssetRef).map((r) => r.slice(ASSET_PREFIX.length)));
   return Object.keys(t.assets).filter((id) => !used.has(id));
 }
 
 /** Remove unreferenced pictures. Mutates `t`; returns how many were removed. */
-export function pruneAssets(t: Template): number {
+export function pruneAssets(t: Pick<Template, 'sides' | 'assets'>): number {
   const ids = unusedAssetIds(t);
   for (const id of ids) delete t.assets[id];
   return ids.length;
@@ -517,23 +542,27 @@ export function assetBytes(assets: AssetStore): number {
 
 /**
  * Move every inline data URL (version 1 templates, or anything pasted in by hand)
- * into the asset store, deduplicating along the way. Mutates and returns `t`.
+ * in every stored design into the asset store, deduplicating along the way.
+ * Mutates and returns `t`; does not touch the schema version.
  */
-export function internAllImages(t: Template): Template {
+export function internAllImages<T extends Pick<Template, 'sides' | 'assets'>>(t: T): T {
   t.assets ??= {};
-  if (t.card.bgImage && !isAssetRef(t.card.bgImage)) t.card.bgImage = internAsset(t.assets, t.card.bgImage);
-  for (const el of t.elements) {
+  for (const d of getStoredDesigns(t)) internDesignImages(d, t.assets);
+  return t;
+}
+
+function internDesignImages(d: SideDesign, assets: AssetStore) {
+  if (d.bgImage && !isAssetRef(d.bgImage)) d.bgImage = internAsset(assets, d.bgImage);
+  for (const el of d.elements) {
     if (el.kind !== 'image') continue;
-    if (el.src && !isAssetRef(el.src)) el.src = internAsset(t.assets, el.src);
+    if (el.src && !isAssetRef(el.src)) el.src = internAsset(assets, el.src);
     if (el.imageRule) {
       for (const [k, v] of Object.entries(el.imageRule.map)) {
-        if (v && !isAssetRef(v)) el.imageRule.map[k] = internAsset(t.assets, v);
+        if (v && !isAssetRef(v)) el.imageRule.map[k] = internAsset(assets, v);
       }
       if (el.imageRule.fallback && !isAssetRef(el.imageRule.fallback)) {
-        el.imageRule.fallback = internAsset(t.assets, el.imageRule.fallback);
+        el.imageRule.fallback = internAsset(assets, el.imageRule.fallback);
       }
     }
   }
-  t.version = 2;
-  return t;
 }

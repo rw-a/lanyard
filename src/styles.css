@@ -152,6 +152,27 @@ code {
 .num-wrap .unit { position: absolute; right: 26px; font-size: 11px; color: var(--muted); pointer-events: none; }
 .num-wrap.has-unit .num { padding-right: 4px; }
 .num-wrap.has-unit .num::-webkit-inner-spin-button { margin-left: 26px; }
+/* Chrome only shows the steppers while hovering; keep them visible. */
+.num::-webkit-inner-spin-button { opacity: 1; }
+/*
+ * Touch browsers (iOS Safari, Android Chrome) draw no steppers, so the unit moves to
+ * the right edge instead of leaving their gap. iOS is matched separately because an
+ * iPad with a trackpad reports hover support.
+ */
+@media (hover: none) and (pointer: coarse) {
+  .num::-webkit-inner-spin-button,
+  .num::-webkit-outer-spin-button { -webkit-appearance: none; display: none; margin: 0; }
+  .num-wrap .unit { right: 10px; }
+  .num-wrap.has-unit .num { padding-right: 30px; }
+}
+@supports (-webkit-touch-callout: none) {
+  .num::-webkit-inner-spin-button,
+  .num::-webkit-outer-spin-button { -webkit-appearance: none; display: none; margin: 0; }
+  .num-wrap .unit { right: 10px; }
+  .num-wrap.has-unit .num { padding-right: 30px; }
+}
+/* Zoom out, the zoom level and zoom in always stay together on one line. */
+.zoom-controls { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; white-space: nowrap; }
 .color-wrap { display: flex; align-items: center; gap: 6px; }
 input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 .field { margin-bottom: 12px; min-width: 0; }
@@ -178,11 +199,15 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 .grid3 {
   grid-template-columns: 1fr 1fr 1fr;
 }
+/* Landscape sits a little closer to the paper size it modifies, with more room before the spacing fields. */
+.field:has(+ .paper-landscape) { margin-bottom: 8px; }
+.paper-landscape { margin-bottom: 14px; }
 .grid3.paper-spacing-controls {
   row-gap: 6px;
   margin-bottom: 12px;
 }
 .paper-spacing-controls .field { margin-bottom: 0; }
+.paper-spacing-controls p { margin: 0; } /* the global paragraph margin would add space below the hint */
 .grid4 {
   grid-template-columns: repeat(4, 1fr);
 }
@@ -199,6 +224,18 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   flex: 0 0 auto;
   margin-bottom: 12px;
 }
+/* A sub-group of Card Settings: a divider and heading above, quieter labels below. */
+.card-background {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.card-background-heading {
+  margin: 0 0 8px;
+}
+.card-background .field-label {
+  color: var(--muted);
+  font-weight: 400;
+}
 .card-background-controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
@@ -208,7 +245,7 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 .card-background-controls .field {
   display: grid;
   grid-template-rows: subgrid;
-  grid-row: 1 / span 3;
+  grid-row: 1 / span 2;
   align-items: start;
 }
 .card-background-controls .field:first-child {
@@ -219,7 +256,7 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 }
 .card-background-separator {
   grid-column: 2;
-  grid-row: 1 / span 3;
+  grid-row: 1 / span 2;
   align-self: stretch;
   margin-bottom: 12px;
   background: var(--border);
@@ -233,6 +270,12 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 }
 .side .section-body {
   padding-bottom: 8px;
+}
+/* The body's own padding is the only space below the last control of an open section. */
+.side .section-body > :last-child,
+.side .section-body > .card-background:last-child .field,
+.side .section-body > .card-background:last-child .card-background-separator {
+  margin-bottom: 0;
 }
 .section-head {
   display: flex;
@@ -249,6 +292,26 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   margin: 0;
 }
 .notice { margin: 12px 0; }
+/* The Data tab tip: compact, its icon centred on the text, and a real button to act on it. */
+.notice.tip {
+  align-items: center;
+  padding: 10px 14px;
+}
+.tip-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.tip-body .btn {
+  flex: 0 0 auto;
+}
+@media (max-width: 640px) {
+  .notice.tip {
+    align-items: flex-start;
+  }
+}
 .notice ul { margin: 4px 0 0; padding-left: 18px; }
 .chip { margin: 2px 4px 2px 0; }
 
@@ -385,6 +448,33 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   max-width: 100%;
   align-self: center;
   text-align: center;
+}
+.canvas-side {
+  color: var(--text);
+  font-weight: 600;
+}
+/* Front / Back navigation right above the canvas (only when the sides differ). */
+.side-switcher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  flex-wrap: wrap;
+}
+.back-actions {
+  margin-top: -2px;
+}
+.sheet-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.print-instructions p {
+  margin: 6px 0 0;
 }
 .caption-mobile {
   display: none;
@@ -565,15 +655,22 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   grid-column: 1 / -1;
 }
 .add-grid .add-icon {
-  position: relative;
-  min-height: 44px;
-  padding: 6px;
+  min-height: 40px;
+  /* Extra right padding nudges the group 4px left: the heavier element icon then sits near the centre. */
+  padding: 4px 12px 4px 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+/* The small plus and the element icon sit together as one group. */
+.add-grid .add-icon > svg {
+  width: 20px;
+  height: 20px;
 }
 .add-grid .add-icon > svg:first-child {
-  position: absolute;
-  left: calc(50% - 26px);
-  top: 50%;
-  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
 }
 .layers {
   list-style: none;
@@ -748,6 +845,18 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   background: repeating-conic-gradient(#f3f4f6 0 25%, #fff 0 50%) 0 0 / 10px 10px;
   display: inline-block;
 }
+/* A picture's preview doubles as its "change" button. */
+.thumb-button {
+  padding: 0;
+  overflow: hidden;
+  background: repeating-conic-gradient(#f3f4f6 0 25%, #fff 0 50%) 0 0 / 10px 10px;
+}
+.thumb-button img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
 .thumb.empty {
   background: repeating-linear-gradient(45deg, #f3f4f6 0 4px, #fff 4px 8px);
 }
@@ -872,6 +981,42 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 .preview-details table {
   margin-top: 8px;
 }
+/* A spoiler-style disclosure: plain text led by a chevron that turns down when open. */
+.preview-details-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.preview-details-trigger:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.preview-details-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.preview-details-indicator {
+  display: inline-flex;
+  color: var(--text);
+  transition: rotate 0.2s;
+}
+.preview-details-indicator svg {
+  width: 16px;
+  height: 16px;
+}
+.preview-details-indicator[data-state='open'] {
+  rotate: 90deg;
+}
 
 /* ---------- Print tab ---------- */
 .print-center {
@@ -885,6 +1030,18 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   align-items: flex-start;
   justify-content: center;
   padding: 20px;
+}
+.sheet-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.sheet-caption {
+  max-width: 60ch;
+  text-align: center;
+  margin: 0;
 }
 .sheet-stage {
   position: relative;
@@ -907,8 +1064,16 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 }
 
 /* ---------- printing ---------- */
+/*
+ * While a print run is being prepared the sheets are laid out off-screen at their
+ * real size (not display:none, which would stop text boxes from measuring).
+ */
 .print-root {
-  display: none;
+  position: fixed;
+  left: -100000px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 @media print {
@@ -921,7 +1086,8 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
     display: none !important;
   }
   .print-root {
-    display: block;
+    position: static;
+    visibility: visible;
   }
   .print-root .sheet {
     break-after: page;
@@ -1052,6 +1218,27 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
   }
   .toolbar > .row:first-child {
     flex: 1 1 100%;
+  }
+  /* Print: sheet navigation stays on the same line as "Back to design", on the right. */
+  .print-center .toolbar {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+  }
+  .print-center .toolbar > .row:first-child {
+    flex: 0 0 auto;
+  }
+  .print-center .toolbar > .row:first-child .btn {
+    padding-inline: 10px;
+  }
+  .print-center .toolbar > .row:last-child {
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .sheet-nav {
+    gap: 4px;
+  }
+  .sheet-face-suffix {
+    display: none;
   }
   .toolbar .sep {
     display: none;

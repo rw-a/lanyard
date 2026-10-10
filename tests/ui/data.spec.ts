@@ -125,3 +125,18 @@ test.describe('Data tab', () => {
     await expect(page.locator('.paste-box')).toBeHidden();
   });
 });
+
+test('the "start without data" tip is compact, aligned and its button is clearly a button', async ({ page }) => {
+  await openApp(page);
+  const tip = page.getByTestId('data-tip');
+  const button = tip.getByRole('button', { name: 'Go to Design' });
+  await expect(button).toBeVisible();
+  await expect(button).not.toHaveCSS('border-top-width', '0px'); // outlined, not text-coloured link text
+  const tipBox = (await tip.boundingBox())!;
+  expect(tipBox.height).toBeLessThanOrEqual(56);
+  const icon = (await tip.locator('svg').first().boundingBox())!;
+  const text = (await tip.getByText('Tip:').boundingBox())!;
+  expect(Math.abs(icon.y + icon.height / 2 - (text.y + text.height / 2))).toBeLessThan(3);
+  await button.click();
+  await expect(page.getByTestId('tab-design')).toHaveAttribute('aria-selected', 'true');
+});

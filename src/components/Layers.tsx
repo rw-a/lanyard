@@ -1,6 +1,6 @@
 import { For, Show, createSignal } from 'solid-js';
 import { describeFit, elementLabel, newImageElement, newRectElement, newTextElement } from '../lib/template';
-import { headers, selectedId, setSelectedId, template, updateElement, updateTemplate } from '../lib/store';
+import { activeDesign, activeSide, headers, selectedElement, selectedId, setSelectedId, template, updateElement, updateSide } from '../lib/store';
 import type { FitStatus, TemplateElement } from '../lib/types';
 import {
   ArrowDown as IconArrowDown,
@@ -31,8 +31,8 @@ export default function Layers(props: Props) {
   const [fieldPick, setFieldPick] = createSignal('');
 
   function add(el: TemplateElement) {
-    updateTemplate((t) => {
-      t.elements.push(el);
+    updateSide(activeSide(), (d) => {
+      d.elements.push(el);
     });
     setSelectedId(el.id);
   }
@@ -45,7 +45,7 @@ export default function Layers(props: Props) {
         name: col,
         content: `{{${col}}}`,
         x: 6,
-        y: Math.min(template.card.height - 16, 10 + template.elements.length * 6),
+        y: Math.min(template.card.height - 16, 10 + activeDesign().elements.length * 6),
         w: W - 12,
         h: 14,
         fontSize: 16,
@@ -58,22 +58,22 @@ export default function Layers(props: Props) {
   }
 
   function move(id: string, delta: number) {
-    updateTemplate((t) => {
-      const i = t.elements.findIndex((e) => e.id === id);
+    updateSide(activeSide(), (d) => {
+      const i = d.elements.findIndex((e) => e.id === id);
       const j = i + delta;
-      if (i < 0 || j < 0 || j >= t.elements.length) return;
-      const [el] = t.elements.splice(i, 1);
-      t.elements.splice(j, 0, el);
+      if (i < 0 || j < 0 || j >= d.elements.length) return;
+      const [el] = d.elements.splice(i, 1);
+      d.elements.splice(j, 0, el);
     });
   }
 
   // Top-most element first in the list.
-  const ordered = () => [...template.elements].reverse();
+  const ordered = () => [...activeDesign().elements].reverse();
 
   return (
     <>
       <TemplateBasics />
-      <Section title="Add" collapsible>
+      <Section title="Add Element" collapsible>
         <div class="add-grid">
           <Show when={headers().length > 0}>
             <Select
@@ -100,8 +100,8 @@ export default function Layers(props: Props) {
         </div>
       </Section>
 
-      <Section title={`Layers (${template.elements.length})`} collapsible>
-        <Show when={template.elements.length === 0}>
+      <Section title={`Layers (${activeDesign().elements.length})`} collapsible>
+        <Show when={activeDesign().elements.length === 0}>
           <p class="muted small">No elements yet. Add a field from your CSV, some text, a colour band or a logo.</p>
         </Show>
         <ul class="layers">
@@ -162,7 +162,7 @@ export default function Layers(props: Props) {
                     aria-label={`${el.locked ? 'Unlock' : 'Lock'} ${el.name}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      updateElement(el.id, (x) => (x.locked = !x.locked));
+                      updateElement(activeSide(), el.id, (x) => (x.locked = !x.locked));
                     }}
                   >
                     <Show when={el.locked} fallback={<IconUnlock aria-hidden="true" />}>
@@ -177,7 +177,7 @@ export default function Layers(props: Props) {
                     aria-label={`${el.hidden ? 'Show' : 'Hide'} ${el.name}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      updateElement(el.id, (x) => (x.hidden = !x.hidden));
+                      updateElement(activeSide(), el.id, (x) => (x.hidden = !x.hidden));
                     }}
                   >
                     <Show when={el.hidden} fallback={<IconEye aria-hidden="true" />}>
@@ -189,7 +189,7 @@ export default function Layers(props: Props) {
             )}
           </For>
         </ul>
-        <Show when={selectedId()}>
+        <Show when={selectedElement()}>
           <div class="row gap" style={{ 'margin-top': '8px' }}>
             <Button variant="outline" size="xs" class="btn small" onClick={props.onDuplicate}>
               Duplicate

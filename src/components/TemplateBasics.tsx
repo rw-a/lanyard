@@ -1,9 +1,22 @@
-import { Show, createMemo } from 'solid-js';
-import { CARD_PRESETS } from '../lib/template';
-import { commit, internImage, template, updateTemplate } from '../lib/store';
+import { Show, createEffect, createMemo, createSignal, on } from 'solid-js';
+import { CARD_PRESETS, imageUrl } from '../lib/template';
+import { SIDEDNESS_OPTIONS, SIDE_LABEL, sideHasContent } from '../lib/sides';
+import {
+  activeDesign,
+  activeSide,
+  beginAsyncEdit,
+  clearBack,
+  commit,
+  copyFrontToBack,
+  internImage,
+  setSidedness,
+  template,
+  updateSide,
+  updateTemplate,
+} from '../lib/store';
 import { readImageFile } from '../lib/images';
 import { ArrowLeftRight } from 'lucide-solid';
-import { ColorField, Field, NumberField, Section, Select, IconButton, Button } from './ui';
+import { ColorField, Field, NumberField, Section, Select, IconButton, Button, Heading, PictureControl } from './ui';
 
 export default function TemplateBasics() {
   let bgInput!: HTMLInputElement;
@@ -11,9 +24,69 @@ export default function TemplateBasics() {
     const preset = CARD_PRESETS.find((p) => p.width === template.card.width && p.height === template.card.height);
     return preset ? preset.label : 'custom';
   });
+  /** Which destructive back action is waiting for "Really…?" confirmation. */
+  const [confirm, setConfirm] = createSignal<'copy' | 'clear' | null>(null);
+  // A pending "Really…?" belongs to the back it was asked about.
+  createEffect(on([activeSide, () => template.sidedness], () => setConfirm(null), { defer: true }));
+  const editingBack = () => template.sidedness === 'different' && activeSide() === 'back';
+
+  function runBackAction(action: 'copy' | 'clear') {
+    if (confirm() !== action && sideHasContent(template.sides.back)) {
+      setConfirm(action);
+      return;
+    }
+    setConfirm(null);
+    if (action === 'copy') copyFrontToBack();
+    else clearBack();
+  }
 
   return (
     <Section title="Card Settings" collapsible>
+      <Field label="Sides">
+        <Select
+          value={template.sidedness}
+          options={SIDEDNESS_OPTIONS}
+          onChange={(mode) => {
+            setConfirm(null);
+            setSidedness(mode);
+          }}
+        />
+      </Field>
+      <Show when={editingBack()}>
+        <div class="row gap wrap back-actions" data-testid="back-actions">
+          <Show
+            when={confirm() === 'copy'}
+            fallback={
+              <Button variant="outline" size="xs" class="btn small" onClick={() => runBackAction('copy')}>
+                Copy Front to Back
+              </Button>
+            }
+          >
+            <Button variant="outline" size="xs" colorPalette="red" class="btn small danger" onClick={() => runBackAction('copy')}>
+              Really replace the back?
+            </Button>
+            <Button variant="outline" size="xs" class="btn small" onClick={() => setConfirm(null)}>
+              Cancel
+            </Button>
+          </Show>
+          <Show
+            when={confirm() === 'clear'}
+            fallback={
+              <Button variant="outline" size="xs" class="btn small" onClick={() => runBackAction('clear')}>
+                Clear Back
+              </Button>
+            }
+          >
+            <Button variant="outline" size="xs" colorPalette="red" class="btn small danger" onClick={() => runBackAction('clear')}>
+              Really clear the back?
+            </Button>
+            <Button variant="outline" size="xs" class="btn small" onClick={() => setConfirm(null)}>
+              Cancel
+            </Button>
+          </Show>
+        </div>
+      </Show>
+
       <Field label="Preset">
         <Select
           value={presetValue()}
@@ -52,42 +125,47 @@ export default function TemplateBasics() {
           <ArrowLeftRight size={18} aria-hidden="true" />
         </IconButton>
       </div>
-      <Field label="Corner radius">
+      <Field label="Corner Radius">
         <NumberField value={template.card.borderRadius} min={0} max={30} unit="mm" onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.borderRadius = v), false)} />
       </Field>
-
-      <div class="card-background-controls">
-        <Field label="Background Colour">
-          <ColorField value={template.card.bg} onCommit={commit} onInput={(v) => updateTemplate((t) => (t.card.bg = v), false)} />
-        </Field>
-        <span class="card-background-separator" aria-hidden="true" />
-        <Field label="Background Image" block>
-          <div class="row gap wrap">
-            <Button variant="outline" size="xs" class="btn small" onClick={() => bgInput.click()}>
-              {template.card.bgImage ? 'Replace…' : 'Upload…'}
-            </Button>
-            <Show when={template.card.bgImage}>
-              <Button variant="outline" size="xs" class="btn small" onClick={() => updateTemplate((t) => (t.card.bgImage = null))}>
-                Remove
-              </Button>
-            </Show>
-          </div>
-          <input
-            ref={bgInput}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={async (e) => {
-              const input = e.currentTarget; // null after the first await
-              const f = input.files?.[0];
-              if (f) {
-                const ref = internImage(await readImageFile(f, 2400));
-                updateTemplate((t) => (t.card.bgImage = ref));
-              }
-              input.value = '';
-            }}
-          />
-        </Field>
+      <div class="card-background" data-side={activeSide()}>
+        {/* Each side has its own background; name the side only when there are two to choose from. */}
+        <Heading as="h4" textStyle="sm" color="fg.default" class="card-background-heading" data-testid="background-heading">
+          Background{template.sidedness === 'different' ? ` — ${SIDE_LABEL[activeSide()]}` : ''}
+        </Heading>
+        <div class="card-background-controls">
+          <Field label="Background Colour" labelContent="Colour">
+            <ColorField value={activeDesign().bg} onCommit={commit} onInput={(v) => updateSide(activeSide(), (d) => (d.bg = v), false)} />
+          </Field>
+          <span class="card-background-separator" aria-hidden="true" />
+          <Field label="Background Image" labelContent="Image" block>
+            <PictureControl
+              url={imageUrl(template.assets, activeDesign().bgImage)}
+              what="background image"
+              onPick={() => bgInput.click()}
+              onRemove={() => updateSide(activeSide(), (d) => (d.bgImage = null))}
+            />
+            <input
+              ref={bgInput}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={async (e) => {
+                const input = e.currentTarget; // null after the first await
+                const f = input.files?.[0];
+                input.value = '';
+                if (!f) return;
+                // Remember which side this upload is for: the user may switch sides before it finishes.
+                const side = activeSide();
+                const stillWanted = beginAsyncEdit(side, 'bgImage');
+                const dataUrl = await readImageFile(f, 2400);
+                if (!stillWanted()) return;
+                const ref = internImage(dataUrl);
+                updateSide(side, (d) => (d.bgImage = ref));
+              }}
+            />
+          </Field>
+        </div>
       </div>
     </Section>
   );

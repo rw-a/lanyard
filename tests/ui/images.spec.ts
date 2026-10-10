@@ -34,9 +34,9 @@ test.describe('Images – fixed picture', () => {
     await page.getByTestId('image-upload').setInputFiles(logo);
     await expect(canvasImage(page)).toHaveAttribute('src', logo.dataUrl);
     for (const v of VARIANTS) await expect(previewImage(page, v)).toHaveAttribute('src', logo.dataUrl);
-    await expect(page.locator('.side.right img.thumb')).toHaveAttribute('src', logo.dataUrl);
+    await expect(page.locator('.side.right').getByTestId('picture-preview')).toHaveAttribute('src', logo.dataUrl);
 
-    await page.getByRole('button', { name: 'Remove', exact: true }).click();
+    await page.getByRole('button', { name: 'Remove picture', exact: true }).click();
     await expect(canvasImage(page)).toHaveCount(0);
     await expect(canvasCard(page).getByTestId('image-placeholder')).toBeVisible();
     expect((await imageEl(page)).src).toBe('');
@@ -352,13 +352,20 @@ test.describe('Images – deduplicated storage', () => {
     const payload = logo.dataUrl.split(',')[1];
     expect(text.split(payload).length - 1).toBe(1); // the picture's bytes appear exactly once
     const exported = JSON.parse(text);
-    expect(exported.version).toBe(2);
+    expect(exported.version).toBe(3);
     expect(Object.keys(exported.assets)).toHaveLength(1);
 
-    // Build a version-1 template by hand: pictures inline, the same one twice
-    const v1 = { ...exported, version: 1, assets: undefined, name: 'Old style' };
-    v1.card.width = 86;
-    for (const el of v1.elements) if (el.kind === 'image') el.src = logo.dataUrl;
+    // A real version-1 file: one design, background on the card, pictures inline (the same one twice), a card name
+    const elements = structuredClone(exported.sides.front.elements);
+    for (const el of elements) if (el.kind === 'image') el.src = logo.dataUrl;
+    const { printMethod: _unused, ...legacyPage } = exported.page;
+    const v1 = {
+      version: 1,
+      name: 'Old style',
+      card: { width: 86, height: exported.card.height, borderRadius: exported.card.borderRadius, bg: '#ffffff', bgImage: null },
+      page: legacyPage,
+      elements,
+    };
     await page.locator('input[type=file][accept*="json"]').setInputFiles({
       name: 'old.lanyard.json',
       mimeType: 'application/json',
@@ -369,9 +376,11 @@ test.describe('Images – deduplicated storage', () => {
     await expect(canvasImage(page).first()).toHaveAttribute('src', logo.dataUrl);
     const t = await getTemplate(page);
     expect(t).not.toHaveProperty('name');
-    expect(t.version).toBe(2);
+    expect(t.version).toBe(3);
+    expect(t.sidedness).toBe('single');
+    expect(t.page.printMethod).toBe('cutouts');
     expect(Object.keys(t.assets)).toHaveLength(1);
-    for (const el of t.elements) if (el.kind === 'image') expect(el.src.startsWith(ASSET_PREFIX)).toBe(true);
+    for (const el of t.sides.front.elements) if (el.kind === 'image') expect(el.src.startsWith(ASSET_PREFIX)).toBe(true);
   });
 
   test('the card background is stored as a picture too', async ({ page }) => {
@@ -380,10 +389,48 @@ test.describe('Images – deduplicated storage', () => {
     await page.locator('[data-field="Background Image"] input[type=file]').setInputFiles(bg);
     await expect(canvasCard(page)).toHaveCSS('background-image', `url("${bg.dataUrl}")`);
     const t = await getTemplate(page);
-    expect(t.card.bgImage!.startsWith(ASSET_PREFIX)).toBe(true);
+    expect(t.sides.front.bgImage!.startsWith(ASSET_PREFIX)).toBe(true);
     expect(Object.keys(t.assets)).toHaveLength(1);
-    await page.getByRole('button', { name: 'Remove', exact: true }).click();
+    await page.getByRole('button', { name: 'Remove background image', exact: true }).click();
     await expect(canvasCard(page)).toHaveCSS('background-image', 'none');
     await expect.poll(async () => Object.keys((await getTemplate(page)).assets).length).toBe(0);
   });
+});
+
+test.describe('Picture controls', () => {
+  for (const [what, input, scope] of [
+    ['background image', '[data-field="Background Image"] input[type=file]', '.side.left'],
+    ['picture', '[data-testid="image-upload"]', '.side.right'],
+  ] as const) {
+    test(`the ${what} is uploaded with an icon, changed by clicking its preview and removed with a delete icon`, async ({ page }) => {
+      await loadSample(page);
+      if (what === 'picture') await addImageElement(page);
+      const panel = page.locator(scope);
+      const upload = panel.getByRole('button', { name: `Upload ${what}`, exact: true });
+      await expect(upload).toHaveAttribute('title', 'Upload'); // the label shown on hover
+      await expect(upload).toHaveText(''); // an icon, no text
+      await expect(upload.locator('svg')).toBeVisible();
+
+      const first = await makePng(page, 'first.png', '#ff0000');
+      await page.locator(input).setInputFiles(first);
+      const change = panel.getByRole('button', { name: `Change ${what}`, exact: true });
+      await expect(change).toHaveAttribute('title', 'Change');
+      await expect(change.getByTestId('picture-preview')).toHaveAttribute('src', first.dataUrl);
+      await expect(upload).toHaveCount(0);
+      const preview = (await change.boundingBox())!;
+      expect(preview.width).toBeLessThanOrEqual(40); // a small preview
+      // Clicking the preview opens the file picker to change it
+      const [chooser] = await Promise.all([page.waitForEvent('filechooser'), change.click()]);
+      const second = await makePng(page, 'second.png', '#0000ff');
+      await chooser.setFiles({ name: second.name, mimeType: second.mimeType, buffer: second.buffer });
+      await expect(change.getByTestId('picture-preview')).toHaveAttribute('src', second.dataUrl);
+
+      const remove = panel.getByRole('button', { name: `Remove ${what}`, exact: true });
+      await expect(remove).toHaveAttribute('title', 'Remove');
+      await expect(remove).toHaveText('');
+      await remove.click();
+      await expect(change).toHaveCount(0);
+      await expect(upload).toBeVisible();
+    });
+  }
 });

@@ -1,8 +1,11 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount } from 'solid-js';
 import { GripHorizontal, Minus, Plus, Redo2, Undo2 } from 'lucide-solid';
-import { fitProblem, type FitStatus, type PreviewSource, type TemplateElement } from '../lib/types';
-import { PX_PER_MM, clamp, describeFit, outsideCard, round } from '../lib/template';
+import { fitProblem, type FitStatus, type PreviewSource, type SideId, type TemplateElement } from '../lib/types';
+import { PX_PER_MM, clamp, describeFit, outsideCard, round, uid } from '../lib/template';
+import { editingLabel } from '../lib/sides';
 import {
+  activeDesign,
+  activeSide,
   canRedo,
   canUndo,
   commit,
@@ -17,12 +20,13 @@ import {
   template,
   undo,
   updateElement,
-  updateTemplate,
+  updateSide,
 } from '../lib/store';
 import Card from './Card';
 import Inspector from './Inspector';
 import Layers from './Layers';
 import Previews from './Previews';
+import SideSwitcher from './SideSwitcher';
 import { Select, IconButton, Button, Toggle, Splitter } from './ui';
 
 type HandleDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
@@ -31,6 +35,8 @@ const HANDLES: HandleDir[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 interface DragState {
   kind: 'move' | 'resize';
   dir?: HandleDir;
+  /** The side the dragged element belongs to; every move of this drag edits that side only. */
+  side: SideId;
   id: string;
   pointerId: number;
   startX: number;
@@ -51,8 +57,13 @@ export default function Designer() {
   const [panMode, setPanMode] = createSignal(false);
   const [snap, setSnap] = createSignal(true);
   const [grid, setGrid] = createSignal(true);
-  /** Fit status per text element for the card currently on the canvas. */
-  const [fitMap, setFitMap] = createSignal<Map<string, FitStatus>>(new Map());
+  /** Fit status per text element for the card currently on the canvas (results for the side being edited only). */
+  const [rawFitMap, setFitMap] = createSignal<Map<string, FitStatus>>(new Map());
+  /** Ignore results for layers that were deleted or hidden since they were measured. */
+  const fitMap = createMemo(() => {
+    const visible = new Set(activeDesign().elements.filter((e) => !e.hidden).map((e) => e.id));
+    return new Map([...rawFitMap()].filter(([id]) => visible.has(id)));
+  });
   const [canvasSize, setCanvasSize] = createSignal({ width: 0, height: 0 });
   let canvasArea!: HTMLDivElement;
   let canvasCaption!: HTMLDivElement;
@@ -99,6 +110,19 @@ export default function Designer() {
     fitZoom();
   });
 
+  // Switching sides ends any drag or pan first and starts the fit results afresh.
+  createEffect(
+    on(
+      activeSide,
+      () => {
+        stopDrag();
+        stopPan();
+        setFitMap(new Map());
+      },
+      { defer: true },
+    ),
+  );
+
   // --- pointer interactions -------------------------------------------------
   function onCanvasPointerDown(e: PointerEvent) {
     if (!panMode() && (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('canvas-stage'))) setSelectedId(null);
@@ -124,6 +148,10 @@ export default function Designer() {
 
   function endPan(e: PointerEvent) {
     if (!pan || e.pointerId !== pan.pointerId) return;
+    stopPan();
+  }
+
+  function stopPan() {
     pan = null;
     window.removeEventListener('pointermove', onPanMove);
     window.removeEventListener('pointerup', endPan);
@@ -138,19 +166,19 @@ export default function Designer() {
     if (e.button !== 0 || drag || panMode()) return;
     e.stopPropagation();
     setSelectedId(el.id);
-    beginDrag(e, { kind: 'move', id: el.id, startX: e.clientX, startY: e.clientY, orig: { x: el.x, y: el.y, w: el.w, h: el.h } });
+    beginDrag(e, { kind: 'move', side: activeSide(), id: el.id, startX: e.clientX, startY: e.clientY, orig: { x: el.x, y: el.y, w: el.w, h: el.h } });
   }
 
   function onHandlePointerDown(e: PointerEvent, dir: HandleDir) {
     const el = selectedElement();
     if (!el || e.button !== 0 || drag || panMode()) return;
     e.stopPropagation();
-    beginDrag(e, { kind: 'resize', dir, id: el.id, startX: e.clientX, startY: e.clientY, orig: { x: el.x, y: el.y, w: el.w, h: el.h } });
+    beginDrag(e, { kind: 'resize', dir, side: activeSide(), id: el.id, startX: e.clientX, startY: e.clientY, orig: { x: el.x, y: el.y, w: el.w, h: el.h } });
   }
 
   function beginDrag(e: PointerEvent, state: Omit<DragState, 'pointerId'>) {
     e.preventDefault();
-    commit();
+    commit(state.side);
     drag = { ...state, pointerId: e.pointerId };
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', endDrag);
@@ -166,6 +194,7 @@ export default function Designer() {
     const dy = pxToMm(e.clientY - d.startY);
     if (d.kind === 'move') {
       updateElement(
+        d.side,
         d.id,
         (el) => {
           el.x = round(d.orig.x + dx, step);
@@ -205,6 +234,7 @@ export default function Designer() {
         h = minSize;
       }
       updateElement(
+        d.side,
         d.id,
         (el) => {
           el.x = round(x, step);
@@ -219,6 +249,10 @@ export default function Designer() {
 
   function endDrag(e: PointerEvent) {
     if (!drag || e.pointerId !== drag.pointerId) return;
+    stopDrag();
+  }
+
+  function stopDrag() {
     drag = null;
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', endDrag);
@@ -281,7 +315,7 @@ export default function Designer() {
     const m = moves[e.key];
     if (m && !el.locked) {
       e.preventDefault();
-      updateElement(el.id, (x) => {
+      updateElement(activeSide(), el.id, (x) => {
         x.x = round(x.x + m[0], 0.1);
         x.y = round(x.y + m[1], 0.1);
       });
@@ -293,10 +327,11 @@ export default function Designer() {
   });
 
   function removeSelected() {
-    const id = selectedId();
-    if (!id) return;
-    updateTemplate((t) => {
-      t.elements = t.elements.filter((e) => e.id !== id);
+    const el = selectedElement();
+    if (!el) return;
+    const id = el.id;
+    updateSide(activeSide(), (d) => {
+      d.elements = d.elements.filter((e) => e.id !== id);
     });
     setSelectedId(null);
   }
@@ -305,13 +340,13 @@ export default function Designer() {
     const el = selectedElement();
     if (!el) return;
     const copy = structuredClone({ ...el }) as TemplateElement;
-    copy.id = `el_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+    copy.id = uid();
     copy.x += 3;
     copy.y += 3;
     copy.name = `${el.name} copy`;
-    updateTemplate((t) => {
-      const i = t.elements.findIndex((e) => e.id === el.id);
-      t.elements.splice(i + 1, 0, copy);
+    updateSide(activeSide(), (d) => {
+      const i = d.elements.findIndex((e) => e.id === el.id);
+      d.elements.splice(i + 1, 0, copy);
     });
     setSelectedId(copy.id);
   }
@@ -324,7 +359,8 @@ export default function Designer() {
       { value: 'longest', label: 'Longest values' },
     ];
     const rs = rows();
-    const nameCol = template.elements.find((e) => e.kind === 'text' && /name/i.test(e.name));
+    // Rows are labelled from the front's name field on both sides, so the labels do not change on a side switch.
+    const nameCol = template.sides.front.elements.find((e) => e.kind === 'text' && /name/i.test(e.name));
     rs.forEach((r, i) => {
       let label = `Row ${i + 1}`;
       if (nameCol && nameCol.kind === 'text') {
@@ -347,7 +383,8 @@ export default function Designer() {
     setPreviewSource(src);
   }
 
-  function onFit(id: string, status: FitStatus) {
+  function onFit(side: SideId, id: string, status: FitStatus) {
+    if (side !== activeSide()) return; // a late report from the side that was just switched away from
     setFitMap((prev) => {
       const next = new Map(prev);
       if (fitProblem(status)) next.set(id, status);
@@ -387,17 +424,21 @@ export default function Designer() {
             <Toggle checked={grid()} onChange={setGrid} label="Grid" />
             <Toggle checked={panMode()} onChange={setPanMode} label="Drag to Pan" title="Drag the canvas to pan" />
             <span class="sep" />
-            <IconButton variant="outline" size="xs" class="btn icon" title="Zoom out" onClick={() => setZoom((z) => clamp(round(z - 0.1, 0.05), 0.25, 4))}>
-              <Minus aria-hidden="true" />
-            </IconButton>
-            <Button variant="outline" size="2xs" class="btn tiny" title="Fit to view" onClick={fitZoom}>
-              {Math.round(zoom() * 100)}%
-            </Button>
-            <IconButton variant="outline" size="xs" class="btn icon" title="Zoom in" onClick={() => setZoom((z) => clamp(round(z + 0.1, 0.05), 0.25, 4))}>
-              <Plus aria-hidden="true" />
-            </IconButton>
+            <span class="zoom-controls" role="group" aria-label="Zoom">
+              <IconButton variant="outline" size="xs" class="btn icon" title="Zoom out" onClick={() => setZoom((z) => clamp(round(z - 0.1, 0.05), 0.25, 4))}>
+                <Minus aria-hidden="true" />
+              </IconButton>
+              <Button variant="outline" size="2xs" class="btn tiny" title="Fit to view" onClick={fitZoom}>
+                {Math.round(zoom() * 100)}%
+              </Button>
+              <IconButton variant="outline" size="xs" class="btn icon" title="Zoom in" onClick={() => setZoom((z) => clamp(round(z + 0.1, 0.05), 0.25, 4))}>
+                <Plus aria-hidden="true" />
+              </IconButton>
+            </span>
           </div>
         </div>
+
+        <SideSwitcher />
 
         <Splitter.Root
           class="editor-split"
@@ -435,20 +476,26 @@ export default function Designer() {
                     if (!panMode() && (e.target as HTMLElement).classList.contains('card')) setSelectedId(null);
                   }}
                 >
-                  <Card
-                    template={template}
-                    row={previewRow()}
-                    editor
-                    selectedId={selectedId()}
-                    onElementPointerDown={onElementPointerDown}
-                    onElementDblClick={() => {
-                      const ta = document.getElementById('content-editor') as HTMLTextAreaElement | null;
-                      ta?.focus();
-                      ta?.select();
-                    }}
-                    onFit={onFit}
-                    class="editor-card"
-                  />
+                  {/* Keyed on the side so a switch remounts the card and its text measurements. */}
+                  <Show when={activeSide()} keyed>
+                    {(side) => (
+                      <Card
+                        template={template}
+                        side={side}
+                        row={previewRow()}
+                        editor
+                        selectedId={selectedId()}
+                        onElementPointerDown={onElementPointerDown}
+                        onElementDblClick={() => {
+                          const ta = document.getElementById('content-editor') as HTMLTextAreaElement | null;
+                          ta?.focus();
+                          ta?.select();
+                        }}
+                        onFit={(id, status) => onFit(side, id, status)}
+                        class="editor-card"
+                      />
+                    )}
+                  </Show>
                   <Show when={grid()}>
                     <div class="grid-overlay" style={{ width: `${cardW()}mm`, height: `${cardH()}mm` }} />
                   </Show>
@@ -494,6 +541,11 @@ export default function Designer() {
                 </div>
               </div>
               <div ref={canvasCaption} class="canvas-caption muted small">
+                {/* Name the side only when there is more than one face. */}
+                <Show when={template.sidedness !== 'single'}>
+                  <strong class="canvas-side" data-testid="canvas-side">{editingLabel(template, activeSide())}</strong>
+                  {' · '}
+                </Show>
                 <span class="caption-desktop">
                   {cardW()} × {cardH()} mm · drag to move, drag handles to resize (Shift = keep ratio) · arrows nudge 1 mm · Delete removes · double-click text to edit
                 </span>

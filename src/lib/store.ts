@@ -1,7 +1,9 @@
 import { createMemo, createSignal, batch } from 'solid-js';
 import { createStore, produce, reconcile, unwrap } from 'solid-js/store';
-import type { Dataset, PreviewSource, Template, TemplateElement } from './types';
-import { columnsUsedBy, defaultTemplate, internAllImages, internAsset, pruneAssets, unusedAssetIds } from './template';
+import type { Dataset, PreviewSource, SideDesign, SideId, Sidedness, Template, TemplateElement } from './types';
+import { columnsUsedBy, columnsUsedByDesign, defaultTemplate, internAsset, unusedAssetIds } from './template';
+import { cloneSideDesign, createBlankSide, normalizeEditableSide } from './sides';
+import { parseTemplate, type ParseResult } from './template-migrations';
 import { extremeRows } from './stats';
 import { KEYS, type KeyValueStorage, migrateLegacyLocalStorage, openStorage, requestPersistentStorage } from './storage';
 
@@ -20,6 +22,36 @@ export { storageName };
 const [persistError, setPersistError] = createSignal<string | null>(null);
 export { persistError };
 
+/**
+ * Set when the saved template could not be opened at startup. The original is kept
+ * under `KEYS.recovery` (and in memory) so it can be downloaded; if even that backup
+ * failed, template auto-save stays off so the original is not overwritten.
+ */
+export interface StartupNotice {
+  message: string;
+  /** Auto-save of the template is paused to protect the unreadable original. */
+  savingPaused: boolean;
+}
+const [startupNotice, setStartupNotice] = createSignal<StartupNotice | null>(null);
+export { startupNotice };
+let unreadableTemplate: unknown = undefined;
+let templateWritesBlocked = false;
+
+export function dismissStartupNotice() {
+  setStartupNotice(null);
+}
+
+/** Save the stored template that could not be opened as a file, exactly as it was found. */
+export function downloadUnreadableTemplate() {
+  if (unreadableTemplate === undefined) return;
+  const blob = new Blob([JSON.stringify(unreadableTemplate, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'unreadable-template.lanyard.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
 function describeWriteError(what: string, e: unknown): string {
   const name = (e as { name?: string } | null)?.name ?? '';
   const where = storage?.name === 'indexeddb' ? 'the browser database' : 'browser storage';
@@ -29,6 +61,7 @@ function describeWriteError(what: string, e: unknown): string {
 
 async function write(key: string, value: unknown, what: string): Promise<boolean> {
   if (!storage) return false;
+  if (key === KEYS.template && templateWritesBlocked) return false;
   try {
     await storage.set(key, value);
     setPersistError(null);
@@ -58,7 +91,12 @@ export function setDataset(ds: Dataset | null) {
   if (ds) {
     void write(KEYS.dataset, ds, 'The roster');
     if (templatePristine) {
-      setTemplateStore(reconcile(defaultTemplate(ds.headers), { key: 'id' }));
+      batch(() => {
+        docGeneration++;
+        setTemplateStore(reconcile(defaultTemplate(ds.headers), { key: 'id' }));
+        setActiveSideRaw('front');
+        setSelectedId(null);
+      });
       void write(KEYS.template, structuredClone(unwrap(template)), 'The template');
       void storage?.set(KEYS.pristine, true).catch(() => undefined);
     }
@@ -71,35 +109,33 @@ export const headers = createMemo(() => dataset()?.headers ?? []);
 export const rows = createMemo(() => dataset()?.rows ?? []);
 
 // ---------------------------------------------------------------------------
-// Template (fine-grained store) + undo history
+// Template (fine-grained store)
 // ---------------------------------------------------------------------------
-/** Accept a stored/imported template of any known version and bring it up to date. */
-function sanitize(raw: unknown): Template {
-  const t = raw as (Omit<Partial<Template>, 'version'> & { version?: number }) | null;
-  if (!t || (t.version !== 1 && t.version !== 2) || !t.card || !t.page || !Array.isArray(t.elements)) return defaultTemplate();
-  // Fill in any fields added since the template was saved.
-  const d = defaultTemplate();
-  const merged: Template = {
-    version: 2,
-    card: { ...d.card, ...t.card },
-    page: { ...d.page, ...t.page },
-    elements: t.elements.map((el) =>
-      el.kind === 'image' ? { ...el, imageRule: el.imageRule ?? null, srcColumn: el.srcColumn ?? null } : el,
-    ),
-    assets: { ...(t.assets ?? {}) },
-  };
-  // v1 kept pictures inline as data URLs; move them into the asset store (deduplicated).
-  internAllImages(merged);
-  pruneAssets(merged);
-  return merged;
-}
-
 const [template, setTemplateStore] = createStore<Template>(defaultTemplate());
 export { template };
 
 /** True once persisted state has been loaded (the app renders after this). */
 const [ready, setReady] = createSignal(false);
 export { ready };
+
+/** Keep an unreadable stored template safe before anything can replace it. */
+async function preserveUnreadable(raw: unknown, result: Extract<ParseResult, { ok: false }>) {
+  unreadableTemplate = raw;
+  let backedUp = false;
+  try {
+    await storage?.set(KEYS.recovery, { savedAt: new Date().toISOString(), reason: result.reason, error: result.error, template: raw });
+    backedUp = !!storage;
+  } catch {
+    backedUp = false;
+  }
+  templateWritesBlocked = !backedUp;
+  setStartupNotice({
+    message: backedUp
+      ? `Your saved template could not be opened, so the default design was loaded. ${result.error} The original was kept and can be downloaded.`
+      : `Your saved template could not be opened and a backup copy could not be made, so auto-saving the template is paused to avoid overwriting it. ${result.error} Download the original, or use Export JSON to keep new work.`,
+    savingPaused: !backedUp,
+  });
+}
 
 /**
  * Open storage, migrate anything saved by older versions, and load the saved
@@ -115,18 +151,18 @@ export async function initStore(): Promise<void> {
       storage.get(KEYS.dataset).catch(() => undefined),
       storage.get<boolean>(KEYS.pristine).catch(() => undefined),
     ]);
+    const parsed = storedTemplate === undefined ? null : parseTemplate(storedTemplate);
+    if (parsed && !parsed.ok) await preserveUnreadable(storedTemplate, parsed);
     batch(() => {
-      if (storedTemplate !== undefined) {
-        const upgraded = sanitize(storedTemplate);
-        setTemplateStore(reconcile(upgraded, { key: 'id' }));
-        // Templates saved by older versions are written back in the current format.
-        const hasLegacyName = Object.prototype.hasOwnProperty.call(storedTemplate ?? {}, 'name');
-        if ((storedTemplate as { version?: number } | null)?.version !== upgraded.version || hasLegacyName) {
-          void write(KEYS.template, upgraded, 'The template');
-        }
+      if (parsed?.ok) {
+        docGeneration++;
+        setTemplateStore(reconcile(parsed.template, { key: 'id' }));
+        // Templates saved by older versions are written back in the current format, only after they parsed.
+        if (parsed.changed) void write(KEYS.template, structuredClone(parsed.template), 'The template');
       }
       if (isDataset(storedDataset)) setDatasetRaw(storedDataset);
       templatePristine = storedTemplate === undefined || pristine === true;
+      setActiveSideRaw('front');
       setTab(dataset() ? 'design' : 'data');
     });
   } catch {
@@ -136,10 +172,6 @@ export async function initStore(): Promise<void> {
     setReady(true);
   }
 }
-
-const [undoStack, setUndoStack] = createSignal<Template[]>([]);
-const [redoStack, setRedoStack] = createSignal<Template[]>([]);
-const MAX_HISTORY = 80;
 
 let persistTimer: number | undefined;
 function schedulePersist() {
@@ -168,7 +200,7 @@ export function internImage(dataUrl: string): string {
   return ref;
 }
 
-/** Drop stored pictures that no element refers to any more. */
+/** Drop stored pictures that no stored design (front or a retained back) refers to any more. */
 function pruneUnusedAssets() {
   const ids = unusedAssetIds(unwrap(template));
   if (ids.length === 0) return;
@@ -196,11 +228,225 @@ export function flushPersist(): Promise<boolean> {
   return write(KEYS.template, snapshot, 'The template');
 }
 
-
 // Don't lose the last edit if the page is closed or reloaded inside the debounce window.
 // (An IndexedDB transaction started here still commits in current browsers.)
 window.addEventListener('pagehide', () => void flushPersist());
 window.addEventListener('beforeunload', () => void flushPersist());
+
+// ---------------------------------------------------------------------------
+// Which side is being edited
+// ---------------------------------------------------------------------------
+const [activeSideRaw, setActiveSideRaw] = createSignal<SideId>('front');
+
+/** The side the editor shows. Only `different` has an editable back; otherwise this is always the front. */
+export const activeSide = createMemo<SideId>(() => normalizeEditableSide(template, activeSideRaw()));
+
+/** Switch the side being edited (navigation only: no undo entry). Clears the selection when the side changes. */
+export function setActiveSide(side: SideId) {
+  const next = normalizeEditableSide(template, side);
+  if (next !== activeSide()) setSelectedId(null);
+  setActiveSideRaw(next);
+}
+
+/** The stored design the editor is working on. */
+export const activeDesign = createMemo<SideDesign>(() => template.sides[activeSide()] ?? template.sides.front);
+
+// ---------------------------------------------------------------------------
+// Guarding asynchronous edits (image uploads)
+// ---------------------------------------------------------------------------
+/** Changes whenever the whole template is replaced (import, reset, starter regenerated, startup load). */
+let docGeneration = 0;
+/** Changes whenever a side's contents are replaced wholesale (cleared, copied over, restored by undo/redo). */
+const sideGeneration: Record<SideId, number> = { front: 0, back: 0 };
+const latestRequest = new Map<string, number>();
+let requestCounter = 0;
+
+/**
+ * Call before starting an asynchronous edit (reading an uploaded file) aimed at
+ * one side; `key` names the target (element + property). The returned function
+ * says whether the result may still be applied: false once the document was
+ * replaced, the side cleared or restored, the target side removed, or a newer
+ * request for the same target started. Switching the visible side does not
+ * invalidate it – the edit still lands on the side it was started for.
+ */
+export function beginAsyncEdit(side: SideId, key: string): () => boolean {
+  const doc = docGeneration;
+  const gen = sideGeneration[side];
+  const id = `${side}:${key}`;
+  const req = ++requestCounter;
+  latestRequest.set(id, req);
+  return () => doc === docGeneration && gen === sideGeneration[side] && latestRequest.get(id) === req && !!template.sides[side];
+}
+
+export function findElement(side: SideId, id: string): TemplateElement | undefined {
+  return template.sides[side]?.elements.find((e) => e.id === id);
+}
+
+// ---------------------------------------------------------------------------
+// Undo history: whole-template snapshots plus where the change happened
+// ---------------------------------------------------------------------------
+interface HistoryEntry {
+  template: Template;
+  /** The side whose content the change affected; revealed again on undo/redo. */
+  side: SideId;
+  selectedId: string | null;
+}
+
+const [undoStack, setUndoStack] = createSignal<HistoryEntry[]>([]);
+const [redoStack, setRedoStack] = createSignal<HistoryEntry[]>([]);
+const MAX_HISTORY = 80;
+
+function snapshot(): Template {
+  return structuredClone(unwrap(template));
+}
+
+/** Record the current state so the next change (to `side`, by default the one being edited) can be undone. */
+export function commit(side: SideId = activeSide()) {
+  setUndoStack((s) => [...s.slice(-(MAX_HISTORY - 1)), { template: snapshot(), side, selectedId: selectedId() }]);
+  setRedoStack([]);
+}
+
+/** Apply a mutation to the template. `record` = push an undo entry first (default true). */
+export function updateTemplate(fn: (t: Template) => void, record = true, side?: SideId) {
+  if (record) commit(side);
+  setTemplateStore(produce(fn));
+  schedulePersist();
+}
+
+/** Mutate one stored design. A side that does not exist is left alone (never created by a late callback). */
+export function updateSide(side: SideId, fn: (design: SideDesign) => void, record = true) {
+  if (!template.sides[side]) return;
+  updateTemplate(
+    (t) => {
+      const d = t.sides[side];
+      if (d) fn(d);
+    },
+    record,
+    side,
+  );
+}
+
+/** Mutate one element of one stored design; ignored when it no longer exists there. */
+export function updateElement<T extends TemplateElement>(side: SideId, id: string, fn: (el: T) => void, record = true) {
+  if (!findElement(side, id)) return;
+  updateSide(
+    side,
+    (d) => {
+      const el = d.elements.find((e) => e.id === id) as T | undefined;
+      if (el) fn(el);
+    },
+    record,
+  );
+}
+
+/**
+ * Replace the whole template with a stored/imported one of any known version.
+ * Nothing changes (template, selection, history) when it cannot be read; the
+ * failure is returned for the caller to report.
+ */
+export function replaceTemplate(raw: unknown, record = true): ParseResult {
+  const result = parseTemplate(raw);
+  if (!result.ok) return result;
+  batch(() => {
+    if (record) commit();
+    docGeneration++;
+    setTemplateStore(reconcile(result.template, { key: 'id' }));
+    setActiveSideRaw('front');
+    setSelectedId(null);
+  });
+  schedulePersist();
+  return result;
+}
+
+function sideJson(t: Template, side: SideId): string {
+  return JSON.stringify(t.sides[side]);
+}
+
+/** Put a history snapshot back and reveal the side it affected. */
+function restore(entry: HistoryEntry) {
+  const current = unwrap(template);
+  for (const side of ['front', 'back'] as const) {
+    if (sideJson(current, side) !== sideJson(entry.template, side)) sideGeneration[side]++;
+  }
+  setTemplateStore(reconcile(entry.template, { key: 'id' }));
+  const side = normalizeEditableSide(template, entry.side);
+  setActiveSideRaw(side);
+  setSelectedId(entry.selectedId && template.sides[side]?.elements.some((e) => e.id === entry.selectedId) ? entry.selectedId : null);
+}
+
+export function undo() {
+  const stack = undoStack();
+  if (stack.length === 0) return;
+  const prev = stack[stack.length - 1];
+  batch(() => {
+    // The inverse entry carries the popped entry's side, not whatever tab is visible now.
+    setRedoStack((r) => [...r, { template: snapshot(), side: prev.side, selectedId: selectedId() }]);
+    setUndoStack(stack.slice(0, -1));
+    restore(prev);
+  });
+  schedulePersist();
+}
+
+export function redo() {
+  const stack = redoStack();
+  if (stack.length === 0) return;
+  const next = stack[stack.length - 1];
+  batch(() => {
+    setUndoStack((u) => [...u, { template: snapshot(), side: next.side, selectedId: selectedId() }]);
+    setRedoStack(stack.slice(0, -1));
+    restore(next);
+  });
+  schedulePersist();
+}
+
+export const canUndo = () => undoStack().length > 0;
+export const canRedo = () => redoStack().length > 0;
+
+// ---------------------------------------------------------------------------
+// Sides: mode changes and whole-side actions (each one undo step)
+// ---------------------------------------------------------------------------
+/**
+ * Change how many faces the badge has. Choosing different sides for the first
+ * time starts the back as a copy of the front; a back saved earlier is restored
+ * untouched. Leaving `different` keeps the back stored for later.
+ */
+export function setSidedness(mode: Sidedness) {
+  if (mode === template.sidedness) return;
+  const needsBack = mode === 'different' && !template.sides.back;
+  const newBack = needsBack ? cloneSideDesign(unwrap(template.sides.front)) : null;
+  batch(() => {
+    updateTemplate((t) => {
+      if (newBack) t.sides.back = newBack;
+      t.sidedness = mode;
+    });
+    if (newBack) sideGeneration.back++;
+    setSelectedId(null);
+    setActiveSideRaw(mode === 'different' ? 'back' : 'front');
+  });
+}
+
+/** Replace the independent back with a fresh copy of the front. */
+export function copyFrontToBack() {
+  if (template.sidedness !== 'different') return;
+  const copy = cloneSideDesign(unwrap(template.sides.front));
+  batch(() => {
+    updateTemplate((t) => (t.sides.back = copy), true, 'back');
+    sideGeneration.back++;
+    setSelectedId(null);
+    setActiveSideRaw('back');
+  });
+}
+
+/** Empty the independent back: white background, no picture, no layers. */
+export function clearBack() {
+  if (template.sidedness !== 'different') return;
+  batch(() => {
+    updateTemplate((t) => (t.sides.back = createBlankSide()), true, 'back');
+    sideGeneration.back++;
+    setSelectedId(null);
+    setActiveSideRaw('back');
+  });
+}
 
 // Small debugging/testing hook: `lanyardMaker.getTemplate()` in the console.
 declare global {
@@ -208,6 +454,7 @@ declare global {
     lanyardMaker: {
       getTemplate: () => Template;
       getDataset: () => Dataset | null;
+      getEditor: () => { activeSide: SideId; selectedId: string | null };
       flushPersist: () => Promise<boolean>;
       storage: {
         name: () => KeyValueStorage['name'] | null;
@@ -223,6 +470,7 @@ declare global {
 window.lanyardMaker = {
   getTemplate: () => structuredClone(unwrap(template)),
   getDataset: () => dataset(),
+  getEditor: () => ({ activeSide: activeSide(), selectedId: selectedId() }),
   flushPersist,
   storage: {
     name: () => storage?.name ?? null,
@@ -234,75 +482,23 @@ window.lanyardMaker = {
   keys: KEYS,
 };
 
-function snapshot(): Template {
-  return structuredClone(unwrap(template));
-}
-
-/** Record the current state so the next change can be undone. */
-export function commit() {
-  setUndoStack((s) => [...s.slice(-(MAX_HISTORY - 1)), snapshot()]);
-  setRedoStack([]);
-}
-
-/** Apply a mutation to the template. `record` = push an undo entry first (default true). */
-export function updateTemplate(fn: (t: Template) => void, record = true) {
-  if (record) commit();
-  setTemplateStore(produce(fn));
-  schedulePersist();
-}
-
-export function replaceTemplate(t: Template, record = true) {
-  if (record) commit();
-  setTemplateStore(reconcile(sanitize(t), { key: 'id' }));
-  schedulePersist();
-}
-
-export function undo() {
-  const stack = undoStack();
-  if (stack.length === 0) return;
-  const prev = stack[stack.length - 1];
-  batch(() => {
-    setRedoStack((r) => [...r, snapshot()]);
-    setUndoStack(stack.slice(0, -1));
-    setTemplateStore(reconcile(prev, { key: 'id' }));
-  });
-  schedulePersist();
-}
-
-export function redo() {
-  const stack = redoStack();
-  if (stack.length === 0) return;
-  const next = stack[stack.length - 1];
-  batch(() => {
-    setUndoStack((u) => [...u, snapshot()]);
-    setRedoStack(stack.slice(0, -1));
-    setTemplateStore(reconcile(next, { key: 'id' }));
-  });
-  schedulePersist();
-}
-
-export const canUndo = () => undoStack().length > 0;
-export const canRedo = () => redoStack().length > 0;
-
-export function updateElement<T extends TemplateElement>(id: string, fn: (el: T) => void, record = true) {
-  updateTemplate((t) => {
-    const el = t.elements.find((e) => e.id === id) as T | undefined;
-    if (el) fn(el);
-  }, record);
-}
-
 // ---------------------------------------------------------------------------
 // Selection & preview state
 // ---------------------------------------------------------------------------
 export const [selectedId, setSelectedId] = createSignal<string | null>(null);
-export const selectedElement = createMemo(() => template.elements.find((e) => e.id === selectedId()) ?? null);
+/** The selected layer, looked up in the design being edited only. */
+export const selectedElement = createMemo(() => activeDesign().elements.find((e) => e.id === selectedId()) ?? null);
 
 export const [previewSource, setPreviewSource] = createSignal<PreviewSource>({ type: 'median' });
 export const [ignoreEmpty, setIgnoreEmpty] = createSignal(true);
 
-/** Columns referenced by the template, in a stable order (template order, then any leftover headers). */
+/** Columns the printed output reads from, in a stable order (front first, then extra back columns). */
 export const usedColumns = createMemo(() => columnsUsedBy(template));
 
+/** Columns the design on the canvas reads from. */
+export const activeColumns = createMemo(() => columnsUsedByDesign(activeDesign()));
+
+/** Synthetic shortest/median/longest rows. Each column is independent, so both faces can share them. */
 export const extremes = createMemo(() => extremeRows(rows(), usedColumns(), ignoreEmpty()));
 
 /** Placeholder row when there is no data yet: shows column names in braces. */

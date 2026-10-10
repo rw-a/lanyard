@@ -1,9 +1,9 @@
-import { button } from 'styled-system/recipes';
-import { Check, TriangleAlert } from 'lucide-solid';
+import { Check, ChevronRight, TriangleAlert } from 'lucide-solid';
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { PX_PER_MM, elementLabel } from '../lib/template';
-import { extremes, ignoreEmpty, previewSource, rows, setIgnoreEmpty, setPreviewSource, setSelectedId, template, usedColumns } from '../lib/store';
-import { fitProblem, type FitStatus, type Row } from '../lib/types';
+import { activeColumns, activeDesign, activeSide, extremes, ignoreEmpty, previewSource, rows, setIgnoreEmpty, setPreviewSource, setSelectedId, template } from '../lib/store';
+import { editingLabel } from '../lib/sides';
+import { fitProblem, type FitStatus, type Row, type SideId } from '../lib/types';
 import Card from './Card';
 import { Switch, Table, Collapsible, SurfaceCard, Heading } from './ui';
 
@@ -73,22 +73,32 @@ export default function Previews() {
   /** The canvas is filled from the same shortest/median/longest rows when its "Preview with" is set to one of them. */
   const canvasUsesExtremes = () => previewSource().type !== 'row';
   const canvasVariantName = () => previewSource().type;
+  const sideLabel = () => editingLabel(template, activeSide());
+  /** Only the fields the design being checked reads from. */
+  const activeStats = createMemo(() => {
+    const cols = activeColumns();
+    return extremes().stats.filter((s) => cols.includes(s.column));
+  });
 
   return (
     <section class="previews">
       <header class="previews-head">
         <div class="previews-title">
-          <Heading as="h3" textStyle="md" color="fg.default">Fit Check</Heading>
+          <Heading as="h3" textStyle="md" color="fg.default" data-testid="fit-check-title">Fit Check{template.sidedness === 'single' ? '' : ` — ${sideLabel()}`}</Heading>
         </div>
         <p class="muted small">
           <Show when={hasData()} fallback={<>Load a CSV to see your layout filled with the shortest, median and longest values of each field.</>}>
             Each field independently takes its shortest, median or longest value across all {rows().length} rows. Red outlines mean the text does not
             fit even at its minimum font size, or is cut off by the edge of the card.
+            <Show when={template.sidedness === 'different'}> These checks cover the {sideLabel()} only; switch sides to check the other one.</Show>
           </Show>
         </p>
       </header>
       <div class="previews-strip" ref={strip}>
-        <For each={variants}>{(v) => <PreviewCard variant={v} zoom={zoom()} enabled={hasData()} />}</For>
+        {/* Keyed on the side: a switch remounts the previews so no result from the other side lingers. */}
+        <Show when={activeSide()} keyed>
+          {(side) => <For each={variants}>{(v) => <PreviewCard side={side} variant={v} zoom={zoom()} enabled={hasData()} />}</For>}
+        </Show>
       </div>
       {/* Options that change how the three cards above are filled, kept right next to them. */}
       <Show when={hasData()}>
@@ -106,9 +116,14 @@ export default function Previews() {
           </span>
         </div>
       </Show>
-      <Show when={hasData() && usedColumns().length > 0}>
+      <Show when={hasData() && activeStats().length > 0}>
         <Collapsible.Root class="preview-details">
-          <Collapsible.Trigger class={button({ variant: 'plain', size: 'xs' })}>Which values are being used?</Collapsible.Trigger>
+          <Collapsible.Trigger class="preview-details-trigger">
+            <Collapsible.Indicator class="preview-details-indicator">
+              <ChevronRight aria-hidden="true" />
+            </Collapsible.Indicator>
+            Which values are being used?
+          </Collapsible.Trigger>
           <Collapsible.Content>
             <Table.Root class="table small stats">
               <Table.Head>
@@ -120,7 +135,7 @@ export default function Previews() {
                 </Table.Row>
               </Table.Head>
               <Table.Body>
-                <For each={extremes().stats}>
+                <For each={activeStats()}>
                   {(s) => (
                     <Table.Row>
                       <Table.Cell>
@@ -147,12 +162,17 @@ export default function Previews() {
   );
 }
 
-function PreviewCard(props: { variant: Variant; zoom: number; enabled: boolean }) {
-  const [fitMap, setFitMap] = createSignal<Map<string, FitStatus>>(new Map());
+function PreviewCard(props: { side: SideId; variant: Variant; zoom: number; enabled: boolean }) {
+  const [rawFitMap, setFitMap] = createSignal<Map<string, FitStatus>>(new Map());
+  /** Results for layers that still exist and are shown on this side. */
+  const fitMap = createMemo(() => {
+    const visible = new Set(activeDesign().elements.filter((e) => !e.hidden).map((e) => e.id));
+    return new Map([...rawFitMap()].filter(([id]) => visible.has(id)));
+  });
   const names = (pick: (s: FitStatus) => boolean) =>
     [...fitMap().entries()]
       .filter(([, s]) => pick(s))
-      .map(([id]) => template.elements.find((e) => e.id === id))
+      .map(([id]) => activeDesign().elements.find((e) => e.id === id))
       .filter((e): e is NonNullable<typeof e> => !!e)
       .map(elementLabel);
   const overflowNames = createMemo(() => names((s) => s.overflow));
@@ -179,9 +199,11 @@ function PreviewCard(props: { variant: Variant; zoom: number; enabled: boolean }
         <div style={{ transform: `scale(${props.zoom})`, 'transform-origin': '0 0' }}>
           <Card
             template={template}
+            side={props.side}
             row={props.enabled ? props.variant.row() : {}}
             class="preview-card"
             onFit={(id, status) =>
+              props.side === activeSide() &&
               setFitMap((prev) => {
                 const next = new Map(prev);
                 if (fitProblem(status)) next.set(id, status);

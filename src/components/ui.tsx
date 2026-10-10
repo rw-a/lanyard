@@ -1,8 +1,10 @@
 import { createListCollection } from '@ark-ui/solid/select';
 import { For, Show, createContext, createMemo, splitProps, useContext, type JSX } from 'solid-js';
 import { Portal } from 'solid-js/web';
+import { Trash2, Upload } from 'lucide-solid';
 import { Input } from './park/input';
 import { Button } from './park/button';
+import { IconButton } from './park/icon-button';
 import { Heading } from './park/heading';
 import * as ParkField from './park/field';
 import * as ParkSelect from './park/select';
@@ -190,6 +192,33 @@ export function Select<T extends string>(props: {
       </Portal>
       <ParkSelect.HiddenSelect />
     </ParkSelect.Root>
+  );
+}
+
+/**
+ * Upload / change / remove one picture. Without a picture it is an upload icon;
+ * with one, a small preview that opens the file picker to change it, plus a delete icon.
+ * `what` names the picture for screen readers ("background image", "picture").
+ */
+export function PictureControl(props: { url: string; what: string; onPick: () => void; onRemove: () => void }) {
+  return (
+    <div class="row gap picture-control">
+      <Show
+        when={props.url}
+        fallback={
+          <IconButton variant="outline" size="xs" class="btn icon" aria-label={`Upload ${props.what}`} title="Upload" onClick={props.onPick}>
+            <Upload aria-hidden="true" />
+          </IconButton>
+        }
+      >
+        <IconButton variant="outline" size="xs" class="btn thumb-button" aria-label={`Change ${props.what}`} title="Change" onClick={props.onPick}>
+          <img src={props.url} alt="" data-testid="picture-preview" />
+        </IconButton>
+        <IconButton variant="outline" size="xs" class="btn icon" aria-label={`Remove ${props.what}`} title="Remove" onClick={props.onRemove}>
+          <Trash2 aria-hidden="true" />
+        </IconButton>
+      </Show>
+    </div>
   );
 }
 

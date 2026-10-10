@@ -235,11 +235,15 @@ export default function DataPanel() {
         </Show>
 
         <Show when={!dataset()}>
-          <Notice class="notice">
-            <strong>Tip:</strong> you can start designing without data — the template will show placeholder field names until a CSV is loaded.{' '}
-            <Button variant="plain" size="md" class="link" onClick={() => setTab('design')}>
-              Go to Design
-            </Button>
+          <Notice class="notice tip" data-testid="data-tip">
+            <span class="tip-body">
+              <span>
+                <strong>Tip:</strong> you can start designing without data — the template will show placeholder field names until a CSV is loaded.
+              </span>
+              <Button variant="outline" size="xs" class="btn small" onClick={() => setTab('design')}>
+                Go to Design <ArrowRight aria-hidden="true" />
+              </Button>
+            </span>
           </Notice>
         </Show>
       </div>

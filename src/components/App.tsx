@@ -1,10 +1,10 @@
 import { For, Show } from 'solid-js';
 import { IdCard } from 'lucide-solid';
-import { dataset, persistError, rows, setTab, tab, template, type Tab } from '../lib/store';
+import { dataset, dismissStartupNotice, downloadUnreadableTemplate, persistError, rows, setTab, startupNotice, tab, template, type Tab } from '../lib/store';
 import DataPanel from './DataPanel';
 import Designer from './Designer';
 import PrintPanel from './PrintPanel';
-import { Badge, Notice, Tabs } from './ui';
+import { Badge, Button, Notice, Tabs } from './ui';
 
 export default function App() {
   const steps: { id: Tab; label: string; n: number }[] = [
@@ -47,6 +47,22 @@ export default function App() {
         <Notice warning class="persist-warning" role="alert" data-testid="persist-warning">
           <strong>Not auto-saved.</strong> {persistError()} Use <em>Export JSON</em> (Design → Template Files) to keep your work.
         </Notice>
+      </Show>
+
+      <Show when={startupNotice()}>
+        {(n) => (
+          <Notice warning class="persist-warning" role="alert" data-testid="startup-notice">
+            <strong>{n().savingPaused ? 'Saved template not opened; auto-save paused.' : 'Saved template not opened.'}</strong> {n().message}{' '}
+            <Button variant="outline" size="xs" class="btn small" onClick={downloadUnreadableTemplate}>
+              Download the original
+            </Button>{' '}
+            <Show when={!n().savingPaused}>
+              <Button variant="plain" size="xs" class="link" onClick={dismissStartupNotice}>
+                Dismiss
+              </Button>
+            </Show>
+          </Notice>
+        )}
       </Show>
 
       <Tabs.Content value="data" class="workspace">

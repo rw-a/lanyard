@@ -1,5 +1,5 @@
 import { expect, test, type CDPSession } from '@playwright/test';
-import { canvasCard, getElement, loadSample, waitForElement, setChecked } from './helpers';
+import { canvasCard, field, getElement, getTemplate, goTo, loadSample, selectOption, setChecked, setSides, waitForElement } from './helpers';
 
 test.use({ viewport: { width: 375, height: 667 }, isMobile: true, hasTouch: true });
 
@@ -13,6 +13,39 @@ async function touchDrag(cdp: CDPSession, x: number, y: number, dx: number, dy: 
   }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 }
+
+async function expectNoOverflow(page: import('@playwright/test').Page, what: string) {
+  const overflow = await page.evaluate(() => ({
+    page: document.documentElement.scrollWidth > innerWidth,
+    visible: [...document.querySelectorAll('body *')]
+      .filter((el) => el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 2)
+      .filter((el) => getComputedStyle(el).overflowX === 'visible')
+      .map((el) => `${el.tagName}.${el.className}`),
+  }));
+  expect(overflow, what).toEqual({ page: false, visible: [] });
+}
+
+test('the side switcher and duplex controls fit small screens and work by touch', async ({ page }) => {
+  await loadSample(page);
+  await setSides(page, 'different');
+  await goTo(page, 'print');
+  await selectOption(page, field(page, 'Printing method'), 'duplex');
+  for (const width of [320, 375]) {
+    await page.setViewportSize({ width, height: 667 });
+    await goTo(page, 'design');
+    await expect(page.getByTestId('side-switcher')).toBeInViewport();
+    await expectNoOverflow(page, `${width}px design`);
+    await page.getByTestId('side-switcher').locator('label', { hasText: 'Front' }).tap();
+    await expect(page.getByTestId('canvas-side')).toHaveText('Front');
+    await page.getByTestId('side-switcher').locator('label', { hasText: 'Back' }).tap();
+    await expect(page.getByTestId('canvas-side')).toHaveText('Back');
+    await goTo(page, 'print');
+    await expectNoOverflow(page, `${width}px print`);
+    await page.getByRole('radio', { name: 'Back' }).locator('..').tap();
+    await expect(page.getByTestId('sheet-label')).toContainText('— Back');
+  }
+  expect((await getTemplate(page)).sidedness).toBe('different');
+});
 
 test('small screens keep every tab within the viewport', async ({ page }) => {
   await loadSample(page);
@@ -56,4 +89,27 @@ test('touch moves and resizes a box; Drag to Pan pans the zoomed canvas', async 
   await expect.poll(() => page.locator('.canvas-area').evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
   await expect.poll(() => page.locator('.canvas-area').evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
   expect(await getElement(page, 'Name')).toEqual(unchanged);
+});
+
+test('touch screens have no number steppers, so units sit at the right edge', async ({ page }) => {
+  await loadSample(page);
+  const wrap = page.locator('.side.left [data-field="Width"] .num-wrap');
+  const unit = (await wrap.locator('.unit').boundingBox())!;
+  const box = (await wrap.boundingBox())!;
+  expect(box.x + box.width - (unit.x + unit.width)).toBeLessThanOrEqual(12);
+  await expect(wrap.locator('input')).toHaveCSS('padding-right', '30px'); // the value never runs under the unit
+});
+
+test('zoom out, the zoom level and zoom in stay together on narrow screens', async ({ page }) => {
+  await loadSample(page);
+  for (const width of [320, 375]) {
+    await page.setViewportSize({ width, height: 667 });
+    const tops = await Promise.all(
+      [page.getByTitle('Zoom out'), page.getByTitle('Fit to view'), page.getByTitle('Zoom in')].map(async (l) => {
+        const b = (await l.boundingBox())!;
+        return b.y + b.height / 2;
+      }),
+    );
+    expect(Math.max(...tops) - Math.min(...tops), `${width}px`).toBeLessThan(2);
+  }
 });

@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import type { Template, TemplateElement } from '../../src/lib/types';
+import type { SideDesign, SideId, Template, TemplateElement } from '../../src/lib/types';
 
 export { KEYS, LEGACY_LOCAL_KEYS } from '../../src/lib/storage';
 
@@ -126,13 +126,20 @@ export function getTemplate(page: Page): Promise<Template> {
   return page.evaluate(() => window.lanyardMaker.getTemplate());
 }
 
+/** The side the editor shows and the selected layer. */
+export function getEditor(page: Page): Promise<{ activeSide: SideId; selectedId: string | null }> {
+  return page.evaluate(() => window.lanyardMaker.getEditor());
+}
+
+type StoredKey = 'template' | 'dataset' | 'template-pristine' | 'template-recovery';
+
 /** Read a value straight from the app's persistent storage (IndexedDB, or its fallback). */
-export function storedGet<T = unknown>(page: Page, key: 'template' | 'dataset' | 'template-pristine'): Promise<T | undefined> {
+export function storedGet<T = unknown>(page: Page, key: StoredKey): Promise<T | undefined> {
   return page.evaluate((k) => window.lanyardMaker.storage.get(k), key) as Promise<T | undefined>;
 }
 
 /** Write a value straight into the app's persistent storage (takes effect on the next load). */
-export function storedSet(page: Page, key: 'template' | 'dataset' | 'template-pristine', value: unknown): Promise<void> {
+export function storedSet(page: Page, key: StoredKey, value: unknown): Promise<void> {
   return page.evaluate(({ k, v }) => window.lanyardMaker.storage.set(k, v), { k: key, v: value });
 }
 
@@ -142,25 +149,32 @@ export async function getStoredTemplate(page: Page): Promise<Template> {
   return (await storedGet<Template>(page, 'template'))!;
 }
 
-export async function getElement(page: Page, name: string): Promise<TemplateElement> {
-  const t = await getTemplate(page);
-  const el = t.elements.find((e) => e.name === name);
-  if (!el) throw new Error(`No element named "${name}" in template (have: ${t.elements.map((e) => e.name).join(', ')})`);
+/** A stored side design (the back only exists once different sides were chosen). */
+export function design(t: Template, side: SideId = 'front'): SideDesign {
+  const d = t.sides[side];
+  if (!d) throw new Error(`The template has no stored ${side} design`);
+  return d;
+}
+
+export async function getElement(page: Page, name: string, side: SideId = 'front'): Promise<TemplateElement> {
+  const els = design(await getTemplate(page), side).elements;
+  const el = els.find((e) => e.name === name);
+  if (!el) throw new Error(`No element named "${name}" on the ${side} (have: ${els.map((e) => e.name).join(', ')})`);
   return el;
 }
 
-export async function elementId(page: Page, name: string): Promise<string> {
-  return (await getElement(page, name)).id;
+export async function elementId(page: Page, name: string, side: SideId = 'front'): Promise<string> {
+  return (await getElement(page, name, side)).id;
 }
 
 /** Poll until the live element satisfies `pred`. */
-export async function waitForElement(page: Page, name: string, pred: (el: TemplateElement) => boolean, message?: string) {
+export async function waitForElement(page: Page, name: string, pred: (el: TemplateElement) => boolean, message?: string, side: SideId = 'front') {
   let last: TemplateElement | undefined;
   await expect
     .poll(
       async () => {
         const t = await getTemplate(page);
-        last = t.elements.find((e) => e.name === name);
+        last = t.sides[side]?.elements.find((e) => e.name === name);
         return last ? pred(last) : false;
       },
       { message: message ? `${message} (last seen: ${JSON.stringify(last && { x: last.x, y: last.y, w: last.w, h: last.h })})` : undefined },
@@ -228,6 +242,23 @@ export async function makePng(page: Page, name: string, color: string, w = 64, h
 
 export const canvasImage = (page: Page) => canvasCard(page).locator('[data-testid="image"]');
 export const previewImage = (page: Page, variant: Variant) => preview(page, variant).locator('[data-testid="image"]');
+
+// ---------------------------------------------------------------------------
+// Sides
+// ---------------------------------------------------------------------------
+
+/** Choose One Sided / Same on Both Sides / Different on Each Side in Card Settings. */
+export async function setSides(page: Page, mode: 'single' | 'same' | 'different') {
+  const label = { single: 'One Sided', same: 'Double-Sided — Same on Both Sides', different: 'Double-Sided — Different on Each Side' }[mode];
+  await selectOption(page, field(page, 'Sides'), { label });
+  await expect.poll(async () => (await getTemplate(page)).sidedness).toBe(mode);
+}
+
+/** Switch the canvas to the front or back (different-sides mode). */
+export async function editSide(page: Page, side: SideId) {
+  await page.getByTestId('side-switcher').getByText(side === 'front' ? 'Front' : 'Back', { exact: true }).click();
+  await expect(page.getByTestId('canvas-side')).toHaveText(side === 'front' ? 'Front' : 'Back');
+}
 
 export async function addImageElement(page: Page) {
   await page.getByRole('button', { name: 'Add image or logo' }).click();
