@@ -296,3 +296,26 @@ test.describe('Fit check – text cut off by the card edge (regression)', () => 
     await expect(page.getByTestId('selection-label')).toContainText('overflows its box and is cut off by the card edge');
   });
 });
+
+test('"Which values are being used?" looks and works like a spoiler-style disclosure', async ({ page }) => {
+  await loadSample(page);
+  const trigger = page.getByRole('button', { name: 'Which values are being used?' });
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(trigger.locator('.preview-details-indicator svg')).toBeVisible();
+  // Not a button-looking box: no border or fill, chevron leading the text
+  await expect(trigger).toHaveCSS('border-top-width', '0px');
+  await expect(trigger).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  const chevron = (await trigger.locator('.preview-details-indicator').boundingBox())!;
+  const box = (await trigger.boundingBox())!;
+  expect(chevron.x - box.x).toBeLessThan(4);
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(trigger.locator('.preview-details-indicator')).toHaveCSS('rotate', '90deg');
+  await expect(page.locator('.preview-details table')).toBeVisible();
+});
+
+test('a one-sided card does not name a side under the canvas or on the fit check', async ({ page }) => {
+  await loadSample(page);
+  await expect(page.locator('.canvas-caption')).not.toContainText('Front');
+  await expect(page.getByTestId('fit-check-title')).toHaveText('Fit Check');
+});

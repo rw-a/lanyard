@@ -1,5 +1,4 @@
-import { button } from 'styled-system/recipes';
-import { Check, TriangleAlert } from 'lucide-solid';
+import { Check, ChevronRight, TriangleAlert } from 'lucide-solid';
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { PX_PER_MM, elementLabel } from '../lib/template';
 import { activeColumns, activeDesign, activeSide, extremes, ignoreEmpty, previewSource, rows, setIgnoreEmpty, setPreviewSource, setSelectedId, template } from '../lib/store';
@@ -119,7 +118,12 @@ export default function Previews() {
       </Show>
       <Show when={hasData() && activeStats().length > 0}>
         <Collapsible.Root class="preview-details">
-          <Collapsible.Trigger class={button({ variant: 'plain', size: 'xs' })}>Which values are being used?</Collapsible.Trigger>
+          <Collapsible.Trigger class="preview-details-trigger">
+            <Collapsible.Indicator class="preview-details-indicator">
+              <ChevronRight aria-hidden="true" />
+            </Collapsible.Indicator>
+            Which values are being used?
+          </Collapsible.Trigger>
           <Collapsible.Content>
             <Table.Root class="table small stats">
               <Table.Head>
