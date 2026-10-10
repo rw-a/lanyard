@@ -215,7 +215,7 @@ export function Switch(props: { checked: boolean; onChange: (v: boolean) => void
 
 export function SegButtons<T extends string>(props: {
   value: T;
-  options: { value: T; label: string; title?: string }[];
+  options: { value: T; label: string; icon?: JSX.Element; title?: string }[];
   onChange: (v: T) => void;
 }) {
   const label = useContext(FieldLabel);
@@ -225,7 +225,7 @@ export function SegButtons<T extends string>(props: {
       <For each={props.options}>
         {(o) => (
           <SegmentGroup.Item value={o.value} title={o.title}>
-            <SegmentGroup.ItemText>{o.label}</SegmentGroup.ItemText>
+            <SegmentGroup.ItemText aria-label={o.icon ? o.label : undefined}>{o.icon ?? o.label}</SegmentGroup.ItemText>
             <SegmentGroup.ItemHiddenInput />
           </SegmentGroup.Item>
         )}

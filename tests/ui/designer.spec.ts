@@ -424,13 +424,14 @@ test.describe('Designer – inspector', () => {
     const id = await elementId(page, 'Accommodation');
     const inner = canvasCard(page).locator(`.el[data-id="${id}"] > div`);
     await expect(inner).toHaveCSS('font-weight', '700');
-    await page.getByRole('button', { name: 'B', exact: true }).click();
+    await page.getByRole('button', { name: 'Bold', exact: true }).click();
     await expect(inner).toHaveCSS('font-weight', '400');
-    await page.getByRole('button', { name: 'I', exact: true }).click();
+    await page.getByRole('button', { name: 'Italic', exact: true }).click();
     await expect(inner).toHaveCSS('font-style', 'italic');
-    await page.getByRole('button', { name: 'AA', exact: true }).click();
+    await page.getByRole('button', { name: 'Uppercase', exact: true }).click();
     await expect(inner).toHaveCSS('text-transform', 'uppercase');
     await page.getByTitle('Left').click();
+    await expect(page.getByRole('radio', { name: 'Left', exact: true })).toBeChecked();
     await expect(inner).toHaveCSS('text-align', 'left');
     await setField(page, 'Size', 10);
     await expect(inner).toHaveCSS('font-size', /^13\.33/); // 10pt
@@ -441,9 +442,9 @@ test.describe('Designer – inspector', () => {
   test('"Shrink to fit" off disables the min size field', async ({ page }) => {
     await loadSample(page);
     await selectLayer(page, 'Name');
-    await expect(field(page, 'Min size')).toBeEnabled();
+    await expect(field(page, 'Min Shrinked Size')).toBeEnabled();
     await setChecked(page.getByLabel('Shrink to fit'), false);
-    await expect(field(page, 'Min size')).toBeDisabled();
+    await expect(field(page, 'Min Shrinked Size')).toBeDisabled();
   });
 
   test('colour by field assigns a distinct fill per value and renders it', async ({ page }) => {

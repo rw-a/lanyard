@@ -154,6 +154,16 @@ code {
 .color-wrap { display: flex; align-items: center; gap: 6px; }
 input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
 .field { margin-bottom: 12px; min-width: 0; }
+.font-style-controls { margin-bottom: 8px; }
+.grid2.font-size-controls { row-gap: 6px; }
+.font-size-controls .field {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: 1 / span 2;
+  align-items: start;
+  margin-bottom: 6px;
+}
+.font-fit-options { margin-bottom: 8px; }
 
 .grid2,
 .grid3,

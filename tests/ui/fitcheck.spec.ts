@@ -154,7 +154,7 @@ test.describe('Fit check – overflow detection', () => {
     await selectLayer(page, 'Name');
     await setField(page, 'H', 8); // two lines at the 12pt minimum no longer fit
     await expect(previewStatus(page, 'longest')).toHaveText(/Overflows: Name/);
-    await setField(page, 'Min size', 5); // one line at ~9pt does
+    await setField(page, 'Min Shrinked Size', 5); // one line at ~9pt does
     await expect(previewStatus(page, 'longest')).toHaveText(/Everything fits/);
   });
 
@@ -171,7 +171,7 @@ test.describe('Fit check – overflow detection', () => {
     await loadSample(page);
     await selectLayer(page, 'Accommodation');
     await setChecked(page.getByLabel('Wrap lines'), false);
-    await setField(page, 'Min size', 18); // "Lakeside Lodge – Ground Floor" at 18pt bold is wider than 86 mm
+    await setField(page, 'Min Shrinked Size', 18); // "Lakeside Lodge – Ground Floor" at 18pt bold is wider than 86 mm
     await expect(previewStatus(page, 'longest')).toHaveText(/Overflows: Accommodation/);
     await expect(previewStatus(page, 'shortest')).toHaveText(/Everything fits/);
   });

@@ -1,5 +1,5 @@
 import { For, Show, createMemo, createSignal } from 'solid-js';
-import { X } from 'lucide-solid';
+import { AlignCenter, AlignLeft, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignVerticalJustifyStart, Bold, CaseUpper, Italic, X } from 'lucide-solid';
 import { unwrap } from 'solid-js/store';
 import type { ColorRule, ImageElement, ImageRule, RectElement, TemplateElement, TextElement } from '../lib/types';
 import {
@@ -272,11 +272,22 @@ function TextInspector(props: { el: TextElement }) {
         <Field label="Family">
           <Select value={props.el.fontFamily} options={FONT_FAMILIES} onChange={(v) => set((el) => (el.fontFamily = v), true)} />
         </Field>
-        <div class="grid2">
+        <div class="row gap wrap font-style-controls">
+          <Button variant="outline" size="xs" class="btn small" aria-label="Bold" title="Bold" aria-pressed={props.el.bold} data-state={props.el.bold ? 'on' : 'off'} onClick={() => set((el) => (el.bold = !el.bold), true)}>
+            <Bold size={16} aria-hidden="true" />
+          </Button>
+          <Button variant="outline" size="xs" class="btn small" aria-label="Italic" title="Italic" aria-pressed={props.el.italic} data-state={props.el.italic ? 'on' : 'off'} onClick={() => set((el) => (el.italic = !el.italic), true)}>
+            <Italic size={16} aria-hidden="true" />
+          </Button>
+          <Button variant="outline" size="xs" class="btn small" aria-label="Uppercase" title="Uppercase" aria-pressed={props.el.uppercase} data-state={props.el.uppercase ? 'on' : 'off'} onClick={() => set((el) => (el.uppercase = !el.uppercase), true)}>
+            <CaseUpper size={16} aria-hidden="true" />
+          </Button>
+        </div>
+        <div class="grid2 font-size-controls">
           <Field label="Size">
             <NumberField value={props.el.fontSize} min={4} max={200} step={1} unit="pt" onCommit={commit} onInput={(v) => set((el) => (el.fontSize = v))} />
           </Field>
-          <Field label="Min size" hint={props.el.shrinkToFit ? 'Shrinks down to this to fit' : 'Only used when shrinking'}>
+          <Field label="Min Shrinked Size">
             <NumberField
               value={props.el.minFontSize}
               min={3}
@@ -289,29 +300,18 @@ function TextInspector(props: { el: TextElement }) {
             />
           </Field>
         </div>
-        <div class="row gap wrap">
+        <div class="row gap wrap font-fit-options">
           <Toggle checked={props.el.shrinkToFit} label="Shrink to fit" onChange={(v) => set((el) => (el.shrinkToFit = v), true)} />
           <Toggle checked={props.el.wrap} label="Wrap lines" onChange={(v) => set((el) => (el.wrap = v), true)} />
-        </div>
-        <div class="row gap wrap">
-          <Button variant="outline" size="xs" class="btn small" aria-pressed={props.el.bold} data-state={props.el.bold ? 'on' : 'off'} style={{ 'font-weight': '700' }} onClick={() => set((el) => (el.bold = !el.bold), true)}>
-            B
-          </Button>
-          <Button variant="outline" size="xs" class="btn small" aria-pressed={props.el.italic} data-state={props.el.italic ? 'on' : 'off'} style={{ 'font-style': 'italic' }} onClick={() => set((el) => (el.italic = !el.italic), true)}>
-            I
-          </Button>
-          <Button variant="outline" size="xs" class="btn small" aria-pressed={props.el.uppercase} data-state={props.el.uppercase ? 'on' : 'off'} onClick={() => set((el) => (el.uppercase = !el.uppercase), true)}>
-            AA
-          </Button>
         </div>
         <div class="grid2">
           <Field label="Align">
             <SegButtons
               value={props.el.align}
               options={[
-                { value: 'left', label: '⇤', title: 'Left' },
-                { value: 'center', label: '↔', title: 'Centre' },
-                { value: 'right', label: '⇥', title: 'Right' },
+                { value: 'left', label: 'Left', icon: <AlignLeft size={16} aria-hidden="true" />, title: 'Left' },
+                { value: 'center', label: 'Centre', icon: <AlignCenter size={16} aria-hidden="true" />, title: 'Centre' },
+                { value: 'right', label: 'Right', icon: <AlignRight size={16} aria-hidden="true" />, title: 'Right' },
               ]}
               onChange={(v) => set((el) => (el.align = v), true)}
             />
@@ -320,9 +320,9 @@ function TextInspector(props: { el: TextElement }) {
             <SegButtons
               value={props.el.vAlign}
               options={[
-                { value: 'top', label: '⤒', title: 'Top' },
-                { value: 'middle', label: '↕', title: 'Middle' },
-                { value: 'bottom', label: '⤓', title: 'Bottom' },
+                { value: 'top', label: 'Top', icon: <AlignVerticalJustifyStart size={16} aria-hidden="true" />, title: 'Top' },
+                { value: 'middle', label: 'Middle', icon: <AlignVerticalJustifyCenter size={16} aria-hidden="true" />, title: 'Middle' },
+                { value: 'bottom', label: 'Bottom', icon: <AlignVerticalJustifyEnd size={16} aria-hidden="true" />, title: 'Bottom' },
               ]}
               onChange={(v) => set((el) => (el.vAlign = v), true)}
             />
