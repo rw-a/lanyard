@@ -24,7 +24,9 @@ export default function App() {
           <For each={steps}>
             {(s) => (
               <Tabs.Trigger value={s.id} data-testid={`tab-${s.id}`}>
-                <span>{s.n}</span>
+                <Badge as="span" size="sm" variant={tab() === s.id ? 'solid' : 'surface'} colorPalette="gray" borderRadius="full" width="5" height="5" padding="0" justifyContent="center" flexShrink="0">
+                  {s.n}
+                </Badge>
                 {s.label}
                 <Show when={s.id === 'data' && dataset()}>
                   <Badge size="sm">{rows().length}</Badge>

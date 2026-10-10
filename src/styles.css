@@ -1014,6 +1014,9 @@ input.color { width: 36px; min-width: 36px; padding: 2px; cursor: pointer; }
     justify-content: center;
     max-width: 100%;
   }
+  .steps [data-part='trigger'] {
+    padding-inline: 10px;
+  }
 
   .data-layout {
     padding: 14px 10px 40px;
